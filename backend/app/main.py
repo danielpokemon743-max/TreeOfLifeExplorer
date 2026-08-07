@@ -31,17 +31,31 @@ async def health():
 
 # Servir o frontend compilado (se existir). Deve ficar DEPOIS dos routers /API.
 try:
-    frontend_dist = os.environ.get(
-        "FRONTEND_DIST",
-        os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "frontend", "dist"),
-    )
-    if os.path.isdir(frontend_dist):
+    def _candidate_dists() -> list[str]:
+        env = os.environ.get("FRONTEND_DIST")
+        base = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))  # /app/backend
+        candidates = []
+        if env:
+            candidates.append(env)
+        candidates += [
+            os.path.join(base, "frontend", "dist"),   # /app/backend/frontend/dist
+            os.path.join(base.replace("/backend", ""), "frontend", "dist"),  # /app/frontend/dist
+            os.path.join(os.path.dirname(base), "frontend", "dist"),          # /frontend/dist
+        ]
+        seen = set()
+        return [c for c in candidates if not (c in seen or seen.add(c))]
+
+    frontend_dist = next((c for c in _candidate_dists() if os.path.isdir(c)), None)
+    if frontend_dist:
+        print(f"[main] Servindo frontend de: {frontend_dist}")
         app.mount("/", StaticFiles(directory=frontend_dist, html=True), name="splash")
     else:
+        print("[main] AVISO: frontend/dist não encontrado em: " + str(_candidate_dists()))
         @app.get("/")
         async def root():
             return {"message": "API do Tree of Life Explorer. Frontend não compilado."}
-except Exception:
+except Exception as e:
+    print(f"[main] Erro ao montar frontend: {e}")
     @app.get("/")
     async def root():
         return {"message": "API do Tree of Life Explorer."}
