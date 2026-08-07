@@ -23,6 +23,9 @@ COPY backend/ /app/backend/
 # Copia o frontend compilado do estágio 1
 COPY --from=frontend /app/frontend/dist /app/frontend/dist
 
+# Aponta o backend para onde o frontend compilado está (container != máquina local)
+ENV FRONTEND_DIST=/app/frontend/dist
+
 EXPOSE 8000
 WORKDIR /app/backend
 CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "1"]
