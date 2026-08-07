@@ -594,9 +594,16 @@ let dX = 0, dY = 0;
 
     window.addEventListener('touchend', (e) => {
       if (e.touches.length === 0) {
+        const wasDrag = this._moved;
         this._drag = false;
         touchStart = null;
         pinchDist = 0;
+        // Tap curto (sem arrastar) = selecionar táxon sob o dedo.
+        // O preventDefault no touchstart impede o "click" sintético, então tratamos aqui.
+        const changed = e.changedTouches && e.changedTouches[0];
+        if (!wasDrag && changed && changed.clientX !== undefined) {
+          this._handleTap(changed.clientX, changed.clientY);
+        }
       }
     });
 
@@ -665,6 +672,15 @@ let dX = 0, dY = 0;
       this.onSelect(node);
       await this.expandNode(node);
     });
+  }
+
+  async _handleTap(x, y) {
+    const node = this._hitTest(x, y);
+    if (!node) return;
+    for (const n of this.allNodes) n.selected = false;
+    node.selected = true;
+    this.onSelect(node);
+    await this.expandNode(node);
   }
 }
 
