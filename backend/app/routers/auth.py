@@ -1,6 +1,6 @@
 import uuid
 from datetime import datetime, timezone
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func as sa_func
 from pydantic import BaseModel
@@ -51,8 +51,18 @@ class PasskeyAddFinishRequest(BaseModel):
 _pending_register = {}
 _pending_login = {}
 
+def _rp_id(request: Request) -> str:
+    """RP ID WebAuthn = domínio que o navegador REALMENTE está usando (sem porta).
+
+    Deriva do header Host da requisição para bater com o domínio da página,
+    em vez de depender da env PUBLIC_URL (que pode ficar desatualizada).
+    """
+    host = request.headers.get("host", "").strip().lower()
+    host = host.split(":")[0]  # remove porta
+    return host or settings.rp_id
+
 @router.post("/register/start")
-async def register_start(body: RegisterStartRequest, db: AsyncSession = Depends(get_db)):
+async def register_start(body: RegisterStartRequest, request: Request, db: AsyncSession = Depends(get_db)):
     nick = body.display_name.strip()
 
     # 1. Filtro de apelidos impróprios
@@ -72,7 +82,7 @@ async def register_start(body: RegisterStartRequest, db: AsyncSession = Depends(
     return {
         "session_id": session_id,
         "options": {
-            "rp": {"name": settings.RP_NAME, "id": settings.rp_id},
+            "rp": {"name": settings.RP_NAME, "id": _rp_id(request)},
             "user": {
                 "id": "dXNlcl8xMjM",
                 "name": nick or "usuario",
@@ -121,14 +131,14 @@ async def register_finish(body: RegisterFinishRequest, db: AsyncSession = Depend
     return {"access_token": token, "token_type": "bearer"}
 
 @router.post("/login/start")
-async def login_start(body: LoginStartRequest, db: AsyncSession = Depends(get_db)):
+async def login_start(body: LoginStartRequest, request: Request, db: AsyncSession = Depends(get_db)):
     nick = body.display_name.strip()
     if not nick or not body.password:
         raise HTTPException(status_code=400, detail="Informe o nick e a senha.")
 
     result = await db.execute(select(User).where(User.display_name == nick))
     user = result.scalar_one_or_none()
-    if not user or not verify_password(body.password, user.password_hash):
+    if not user or not user.password_hash or not verify_password(body.password, user.password_hash):
         raise HTTPException(status_code=401, detail="Nick ou senha incorretos.")
 
     session_id = f"sessao_{uuid.uuid4().hex[:12]}"
@@ -139,7 +149,7 @@ async def login_start(body: LoginStartRequest, db: AsyncSession = Depends(get_db
         "options": {
             "challenge": "dGVzdGVfY2hhbGxlbmdlX2xvZ2lu",
             "timeout": 60000,
-            "rpId": settings.rp_id
+            "rpId": _rp_id(request)
         }
     }
 
@@ -166,12 +176,12 @@ async def login_finish(body: LoginFinishRequest, db: AsyncSession = Depends(get_
     return {"access_token": token, "token_type": "bearer"}
 
 @router.post("/passkeys/add/start")
-async def add_passkey_start(body: PasskeyAddStartRequest, current_user_id: uuid.UUID = Depends(get_current_user_id)):
+async def add_passkey_start(body: PasskeyAddStartRequest, request: Request, current_user_id: uuid.UUID = Depends(get_current_user_id)):
     return {
         "session_id": f"sessao_{uuid.uuid4().hex[:12]}",
         "options": {
             "challenge": "dGVzdGVfY2hhbGxlbmdlX2FkZA",
-            "rp": {"name": settings.RP_NAME, "id": settings.rp_id},
+            "rp": {"name": settings.RP_NAME, "id": _rp_id(request)},
             "user": {"id": "dXNlcl8xMjM", "name": "usuario", "displayName": "Explorador"},
             "pubKeyCredParams": [{"type": "public-key", "alg": -7}],
             "timeout": 60000

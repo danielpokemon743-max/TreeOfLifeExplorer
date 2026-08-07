@@ -903,3 +903,54 @@ body {
     radial-gradient(ellipse 55% 55% at var(--lx, 50%) var(--ly, 35%), rgba(var(--lr, 255), var(--lg, 255), var(--lb, 255), var(--lc, 0.5)) 0%, rgba(var(--lr, 255), var(--lg, 255), var(--lb, 255), 0) 70%);
 }
 html { --lx: 50%; --ly: 35%; --lc: 0.5; --lr: 255; --lg: 255; --lb: 255; }
+
+/* ── Responsive: Tablets (≤ 900px) ────────────────────────────────────────── */
+@media (max-width: 900px) {
+  .info-panel { width: min(88vw, 360px); }
+  .stats-panel { width: min(88vw, 340px); }
+  .search-wrap { max-width: none; }
+  .top-bar { flex-wrap: wrap; justify-content: center; }
+}
+
+/* ── Responsive: Celulares (≤ 640px) ─────────────────────────────────────── */
+@media (max-width: 640px) {
+  .top-bar {
+    flex-direction: column;
+    gap: 0.5rem;
+    padding: 0.6rem 0.8rem;
+  }
+  .logo { font-size: 1.05rem; }
+
+  .search-wrap { width: 100%; display: flex; justify-content: center; }
+  #search-input { max-width: 100%; }
+
+  .controls { width: 100%; justify-content: center; flex-wrap: wrap; }
+  .ctrl-btn { width: 34px; height: 34px; }
+
+  /* Painéis laterais viram overlays de largura quase cheia */
+  .info-panel, .stats-panel {
+    width: 100vw;
+    max-width: none;
+    top: 0;
+    height: 100vh !important;
+    max-height: 100vh;
+  }
+  .info-panel { right: 0; }
+  .stats-panel { left: 0; }
+  .info-panel.hidden { transform: translateX(100%); }
+  .stats-panel.hidden { transform: translateX(-100%); }
+
+  .modal-content {
+    width: 96%;
+    padding: 20px 16px;
+    max-height: 92vh;
+  }
+  .backgrounds-grid {
+    grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
+    max-height: 60vh;
+  }
+  .mini-counter { bottom: 0.8rem; left: 0.8rem; }
+  .notif-toast { max-width: calc(100vw - 32px); right: 8px; bottom: 88px; }
+  .hint-content { white-space: normal; width: max-content; max-width: 90vw; text-align: center; }
+  #taxon-name { font-size: 1.35rem; }
+}
