@@ -3,7 +3,14 @@ from app.models import Base
 from app.config import settings
 
 # Usa DATABASE_URL do ambiente. Local: SQLite. Produção (Render): PostgreSQL via env.
-DATABASE_URL = settings.DATABASE_URL
+def _async_url(url: str) -> str:
+    # Neon/Supabase entregam "postgresql://..."; o SQLAlchemy async precisa do driver.
+    clean = url.split("?")[0]  # descarta params tipo "?sslmode=require" (asyncpg usa SSL por padrão)
+    if clean.startswith("postgresql://"):
+        return clean.replace("postgresql://", "postgresql+asyncpg://", 1)
+    return clean
+
+DATABASE_URL = _async_url(settings.DATABASE_URL)
 
 engine = create_async_engine(DATABASE_URL, echo=False, pool_pre_ping=True)
 async_session = async_sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
