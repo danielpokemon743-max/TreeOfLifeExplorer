@@ -543,8 +543,63 @@ export class TreeRenderer {
       this._requestRender();
     }, { passive: false });
  
-    let dX = 0, dY = 0;
- 
+let dX = 0, dY = 0;
+
+    // ── Suporte a touch (celular/tablet): arrastar com 1 dedo, zoom com 2 ──
+    let touchStart = null;
+    let pinchStart = 0;
+    let pinchDist = 0;
+    let pinchScale = 0;
+
+    this.canvas.addEventListener('touchstart', (e) => {
+      e.preventDefault();
+      if (e.touches.length === 1) {
+        this._drag = true;
+        this._moved = false;
+        dX = e.touches[0].clientX - this.world.x;
+        dY = e.touches[0].clientY - this.world.y;
+        touchStart = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+      } else if (e.touches.length === 2) {
+        this._drag = false;
+        pinchStart = this.world.scale.x;
+        pinchDist = Math.hypot(
+          e.touches[1].clientX - e.touches[0].clientX,
+          e.touches[1].clientY - e.touches[0].clientY
+        );
+      }
+    }, { passive: false });
+
+    window.addEventListener('touchmove', (e) => {
+      if (e.touches.length === 1 && this._drag) {
+        this._moved = true;
+        this.world.x = e.touches[0].clientX - dX;
+        this.world.y = e.touches[0].clientY - dY;
+        this._requestRender();
+        if (this.tooltipEl) {
+          this.tooltipEl.style.setProperty('display', 'none', 'important');
+        }
+      } else if (e.touches.length === 2 && pinchDist > 0) {
+        const dist = Math.hypot(
+          e.touches[1].clientX - e.touches[0].clientX,
+          e.touches[1].clientY - e.touches[0].clientY
+        );
+        this._moved = true;
+        const newScale = Math.max(0.05, Math.min(20, pinchStart * (dist / pinchDist)));
+        this.world.scale.set(newScale);
+        this.scale = newScale;
+        this._requestRender();
+      }
+      if (e.touches.length > 0) e.preventDefault();
+    }, { passive: false });
+
+    window.addEventListener('touchend', (e) => {
+      if (e.touches.length === 0) {
+        this._drag = false;
+        touchStart = null;
+        pinchDist = 0;
+      }
+    });
+
     this.canvas.addEventListener('mousedown', (e) => {
       this._drag  = true;
       this._moved = false;
