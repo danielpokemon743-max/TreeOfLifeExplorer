@@ -1,0 +1,356 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Tree of Life Explorer — Árvore da Vida Interativa</title>
+  <meta name="description" content="Explore a evolução da vida na Terra. Árvore da Vida interativa." />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link
+    href="https://fonts.googleapis.com/css2?family=Inter:ital,wght@0,300;0,400;0,600;1,400&family=Outfit:wght@300;500;700&display=swap"
+    rel="stylesheet">
+  <script src="https://pixijs.download/v7.3.2/pixi.min.js"></script>
+</head>
+
+<body>
+  <!-- Tooltip flutuante para os Táxons -->
+  <div id="taxon-tooltip" class="taxon-tooltip"></div>
+  <!-- Canvas da Árvore -->
+  <div id="tree-canvas" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; pointer-events: auto; z-index: 0;"></div>
+
+  <!-- Barra Superior -->
+  <header class="top-bar glass" role="banner">
+    <!-- Substitua a linha antiga da .logo por esta -->
+<div class="logo" id="tree-logo">
+    <span>🌿</span>
+    <span>T</span><span>r</span><span>e</span><span>e</span>&nbsp;
+    <span>o</span><span>f</span>&nbsp;
+    <span>L</span><span>i</span><span>f</span><span>e</span>
+</div>
+
+    <div class="search-wrap">
+      <input id="search-input" type="search" placeholder="Buscar espécie ou táxon…" autocomplete="off"
+        aria-label="Buscar táxon" />
+    </div>
+
+    <div class="controls" role="toolbar">
+      <button class="ctrl-btn" id="btn-favs-page" title="Meus Favoritos">⭐</button>
+      <button class="ctrl-btn" id="btn-achievements-page" title="Conquistas">🏆</button>
+      <button class="ctrl-btn" id="btn-backgrounds-page" title="Fundos de Tela">🎨</button>
+      <button class="ctrl-btn" id="btn-auth" title="Conta / Passkey">🔑</button>
+      <button class="ctrl-btn" id="btn-zoom-in" title="Zoom +">+</button>
+      <button class="ctrl-btn" id="btn-zoom-out" title="Zoom −">−</button>
+      <button class="ctrl-btn" id="btn-reset" title="Centralizar">⌂</button>
+      <button class="ctrl-btn" id="btn-sources" title="Fontes de dados">📊</button>
+      <button class="ctrl-btn" id="btn-help" title="Sobre o Projeto">❓</button>
+    </div>
+  </header>
+
+  <!-- Painel de Informação do Táxon (direita) -->
+  <aside id="info-panel" class="info-panel glass hidden" aria-label="Informações do táxon">
+    <button id="close-panel" class="close-btn" aria-label="Fechar painel">×</button>
+
+    <div id="taxon-img-wrap">
+      <div class="taxon-img-placeholder">🌿</div>
+    </div>
+
+    <h2 id="taxon-name">—</h2>
+    <span id="taxon-rank" class="rank-badge">—</span>
+
+    <!-- Ações de Progresso do Usuário (Sincronizado no PostgreSQL) -->
+    <div class="user-actions" id="user-actions-row" style="margin: 12px 0; display: flex; gap: 8px;">
+      <button id="btn-fav-taxon" class="action-btn" title="Salvar nos Favoritos">⭐ Favoritar</button>
+    </div>
+
+    <p id="taxon-desc" class="taxon-desc">
+      Clique em qualquer nó para ver informações da espécie.
+    </p>
+
+    <div class="lineage-section" id="lineage-section" style="display:none">
+      <h3>Linhagem Evolutiva</h3>
+      <ul class="lineage-list" id="lineage-list"></ul>
+    </div>
+
+    <div class="taxon-section" id="taxon-conservation" style="display:none">
+      <h3>🛡️ Conservação</h3>
+      <div id="taxon-conservation-body" class="taxon-section-body"></div>
+    </div>
+
+    <div class="taxon-section" id="taxon-occurrence" style="display:none">
+      <h3>🌍 Ocorrências &amp; Distribuição</h3>
+      <div id="taxon-occurrence-body" class="taxon-section-body"></div>
+    </div>
+
+    <div class="taxon-section" id="taxon-genetics" style="display:none">
+      <h3>🧬 Informações Genéticas</h3>
+      <div id="taxon-genetics-body" class="taxon-section-body"></div>
+    </div>
+
+    <a id="wiki-link" class="wiki-link" href="#" target="_blank" rel="noopener" style="display:none">
+      Ler na Wikipedia →
+    </a>
+    <div id="taxon-source" class="taxon-source" style="margin-top:8px; font-size:11px; color:#666; text-align:center;"></div>
+  </aside>
+
+  <!-- Painel de Fontes + Estatísticas (esquerda) -->
+  <aside id="stats-panel" class="stats-panel glass hidden" aria-label="Fontes de dados">
+    <div class="stats-header">
+      <h2>📊 Fontes &amp; Estatísticas</h2>
+      <button class="close-btn" onclick="document.getElementById('stats-panel').classList.add('hidden')">×</button>
+    </div>
+
+    <!-- Contador de seres carregados -->
+    <div class="stats-counter">
+      <div class="counter-label">Táxons carregados na árvore</div>
+      <div class="counter-value">
+        <span id="stats-count">0</span>
+        <span class="counter-sub">/ 2.500.000+ conhecidos</span>
+      </div>
+      <div class="progress-wrap">
+        <div class="progress-bar" id="stats-bar"></div>
+      </div>
+      <p id="stats-loading" class="stats-loading" style="display:none">
+        ⏳ Carregando mais táxons em background…
+      </p>
+    </div>
+
+    <!-- Controles de Áudio Atualizados -->
+<div class="audio-controls" style="margin: 20px 0; padding-top: 15px; border-top: 1px solid rgba(255,255,255,0.1);">
+  <h3 style="margin-bottom: 15px; font-size: 14px; color: #aaa;">CONTROLES DE ÁUDIO</h3>
+  
+  <label style="display: flex; justify-content: space-between; align-items: center; font-size: 13px; margin-bottom: 12px;">
+    <span>🎵 Música</span>
+    <input type="range" id="music-slider" min="0" max="1" step="0.01" value="0.1" style="width: 65%; accent-color: #2ecc71;">
+  </label>
+  
+  <label style="display: flex; justify-content: space-between; align-items: center; font-size: 13px; margin-bottom: 12px;">
+    <span>🔊 Efeitos</span>
+    <input type="range" id="sfx-slider" min="0" max="1" step="0.01" value="0.8" style="width: 65%; accent-color: #3498db;">
+  </label>
+
+  <!-- NOVOS BOTÕES DE MÚSICA -->
+  <div style="display: flex; gap: 8px; margin-top: 10px;">
+    <button id="btn-next-music" class="action-btn" style="flex: 1; font-size: 12px; padding: 6px;" title="Pular para a próxima música">⏭ Pular Música</button>
+  </div>
+
+  <div style="margin-top: 10px;">
+    <label style="font-size: 12px; color: #ccc; display: block; margin-bottom: 4px;">Escolher Música:</label>
+    <select id="select-music" style="width: 100%; padding: 6px; border-radius: 4px; background: #121214; border: 1px solid #333; color: white; font-size: 12px;">
+      <option value="/music/musica1.mp3">Música 1</option>
+      <option value="/music/musica2.mp3">Música 2</option>
+      <option value="/music/musica3.mp3">Música 3</option>
+      <option value="/music/musica4.mp3">Música 4</option>
+    </select>
+  </div>
+</div>
+
+    <!-- Lista de Fontes -->
+    <div class="sources-section">
+      <h3>Fontes de Dados Integradas</h3>
+      <ul id="sources-list" class="sources-list"></ul>
+    </div>
+
+    <div class="stats-note">
+      <p>🔬 A Árvore da Vida está sendo expandida automaticamente em background.</p>
+    </div>
+    <div id="validation-issues" class="validation-issues" style="display:none; margin-top:12px; padding:8px; background:rgba(231,76,60,0.1); border:1px solid rgba(231,76,60,0.3); border-radius:8px; font-size:12px;">
+      <strong style="color:#e74c3c;">⚠</strong> <span id="validation-count">0</span> registro(s) com problemas de validação detectados
+      <div id="validation-detail" style="margin-top:6px; font-size:11px; color:#aaa;"></div>
+    </div>
+
+    <div style="margin-top:12px; display:flex; gap:6px; flex-wrap:wrap;">
+      <button id="btn-validate-lineage" class="action-btn" style="font-size:12px; padding:6px 10px;" title="Validar linhagem de todos os táxons carregados">🔬 Validar Linhagem</button>
+      <button id="btn-test-validator" class="action-btn" style="font-size:12px; padding:6px 10px;" title="Executar testes automatizados do validador">🧪 Testar Validador</button>
+      <button id="btn-bio-filter" class="action-btn" style="font-size:12px; padding:6px 10px;" title="Filtrar nomes não-biológicos (lendários, fictícios, mitológicos)">🌿 Filtro Biológico: ON</button>
+    </div>
+    <div id="bio-filter-info" style="margin-top:4px; font-size:11px; color:#888; text-align:center;"></div>
+    <div id="lineage-progress" style="margin-top:6px; font-size:11px; color:#666; text-align:center;"></div>
+  </aside>
+
+  <!-- Mini-contador flutuante -->
+  <div class="mini-counter glass" id="mini-counter">
+    <span class="mini-icon">🌿</span>
+    <span id="mini-count">0</span>
+    <span class="mini-label">táxons</span>
+  </div>
+
+  <!-- Hint de uso -->
+  <div class="hint-overlay" id="hint" aria-hidden="true">
+    <div class="hint-content glass">
+      🖱 <strong>Arraste</strong> para navegar &nbsp;·&nbsp;
+      <strong>Scroll</strong> para zoom &nbsp;·&nbsp;
+      <strong>Clique</strong> num nó para expandir e ver informações
+    </div>
+  </div>
+  
+  <!-- Janela Modal de Ajuda -->
+  <div id="help-modal" class="modal-overlay hidden">
+    <div class="modal-content">
+      <button id="close-help" class="close-btn">&times;</button>
+      <h2>🧬 Sobre a Árvore da Vida</h2>
+      <div class="modal-body">
+        <p>
+          Esta aplicação é uma ferramenta interativa desenvolvida para explorar a 
+          <strong>biodiversidade e a história evolutiva</strong> dos organismos vivos na Terra.
+        </p>
+        <h3>📌 Como Navegar</h3>
+        <ul>
+          <li><strong>Zoom:</strong> Use a roda do mouse ou os botões <code>+</code> e <code>-</code>.</li>
+          <li><strong>Mover:</strong> Clique e arraste na tela para explorar os ramos.</li>
+          <li><strong>Buscar:</strong> Digite o nome científico ou popular de uma espécie na barra de busca.</li>
+          <li><strong>Detalhes:</strong> Clique em qualquer nó/espécie para ver fotos e informações detalhadas.</li>
+          <li><strong>Musica: </strong> Na aba de Estatísticas,há sliders para controlar o volume da musica e efeitos,também há possibilidade de trocar de musica caso queira.</li>
+          <li><strong>Conquistas: </strong> há diversas conquistas que podem ser liberadas usando o site,faça login na aba de 🗝️,e explore o site como quiser e libere conquistas.</li>
+          <li><strong>Desenvolvimento: </strong> Esse é um projeto de uma pessoa só,podem existir problemas na UX,linhagem evolutiva,etc,mas,estou tentando sempre melhorar o site😊.</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <!-- 🔑 JANELA MODAL DE AUTENTICAÇÃO E PASSKEYS -->
+  <div id="auth-modal" class="modal-overlay hidden">
+    <div class="modal-content">
+      <button id="close-auth" class="close-btn">&times;</button>
+      
+      <h2>🔑 Autenticação via Passkeys</h2>
+
+      <!-- Estado: Não Autenticado -->
+      <div id="auth-unlogged">
+        <p style="font-size: 14px; color: #aaa; margin-bottom: 16px;">
+          Crie uma conta com um <strong>nick</strong> e uma <strong>senha</strong>, depois
+          confirme com o Passkey do seu dispositivo (biometria/chave de segurança). Para entrar,
+          informe o mesmo nick e senha cadastrados e depois confirme no dispositivo.
+        </p>
+
+        <div style="margin-bottom: 12px;">
+          <label style="font-size: 13px; color: #ccc;">Seu Nick:</label>
+          <input type="text" id="auth-display-name" placeholder="Ex: ExploradorBio" autocomplete="username" style="width:100%; padding:8px; margin-top:4px; border-radius:4px; background:#121214; border:1px solid #333; color:white;">
+        </div>
+
+        <div style="margin-bottom: 12px;">
+          <label style="font-size: 13px; color: #ccc;">Senha:</label>
+          <input type="password" id="auth-password" placeholder="Sua senha secreta" autocomplete="current-password" style="width:100%; padding:8px; margin-top:4px; border-radius:4px; background:#121214; border:1px solid #333; color:white;">
+        </div>
+
+        <div style="margin-bottom: 16px;">
+          <label style="font-size: 13px; color: #ccc;">Nome deste Dispositivo (novo cadastro):</label>
+          <input type="text" id="auth-device-name" placeholder="Ex: Computador Pessoal" style="width:100%; padding:8px; margin-top:4px; border-radius:4px; background:#121214; border:1px solid #333; color:white;">
+        </div>
+
+        <button id="btn-register-passkey" style="width:100%; padding:10px; background:#2ecc71; border:none; border-radius:4px; color:white; font-weight:bold; cursor:pointer; margin-bottom:10px;">
+          ✨ Criar Conta (Nick + Senha + Passkey)
+        </button>
+
+        <button id="btn-login-passkey" style="width:100%; padding:10px; background:#3498db; border:none; border-radius:4px; color:white; font-weight:bold; cursor:pointer;">
+          🔐 Entrar (Nick + Senha + Passkey)
+        </button>
+      </div>
+
+      <!-- Estado: Autenticado -->
+      <div id="auth-logged" style="display: none;">
+        <p>Olá, <strong id="logged-user-name" style="color: #2ecc71;">—</strong>!</p>
+        <p style="font-size: 12px; color: #888;">Último Acesso: <span id="logged-last-login">—</span></p>
+
+        <!-- Nível e XP -->
+        <div style="background: rgba(46,204,113,0.08); border: 1px solid rgba(46,204,113,0.25); padding: 12px; border-radius: 6px; margin: 15px 0;">
+          <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:6px;">
+            <strong style="font-size:15px; color:#2ecc71;"><span id="stat-level-symbol">⭐</span> Nível <span id="stat-level-val">1</span></strong>
+            <span style="font-size:12px; color:#aaa;" id="stat-xp-val">0 XP</span>
+          </div>
+          <div style="height:10px; background:rgba(255,255,255,0.1); border-radius:5px; overflow:hidden;">
+            <div id="stat-xp-bar" style="height:100%; width:0%; background:linear-gradient(90deg,#2ecc71,#f1c40f); transition:width .5s;"></div>
+          </div>
+          <p style="font-size:11px; color:#888; margin:6px 0 0;" id="stat-xp-next">0 XP até o próximo nível</p>
+        </div>
+
+        <div style="background: rgba(255,255,255,0.05); padding: 12px; border-radius: 6px; margin: 15px 0;">
+          <h4 style="margin-top:0; font-size:14px;">📊 Seu Progresso no PostgreSQL:</h4>
+          <ul style="font-size: 13px; padding-left: 20px; margin: 0;">
+            <li>Espécies Descobertas: <strong id="stat-discoveries-val">0</strong></li>
+            <li>Favoritos Guardados: <strong id="stat-favorites-val">0</strong></li>
+            <li>Conquistas Obtidas: <strong id="stat-achievements-val">0</strong></li>
+            <li>Tempo Explorando: <strong id="stat-time-val">0 min</strong></li>
+          </ul>
+        </div>
+
+        <h4 style="font-size:14px; margin-bottom:8px;">📱 Dispositivos Cadastrados:</h4>
+        <ul id="user-devices-list" style="font-size: 12px; color: #bbb; max-height: 100px; overflow-y: auto; padding-left: 20px;"></ul>
+
+        <div style="margin-top: 15px; padding-top: 12px; border-top: 1px solid rgba(255,255,255,0.1);">
+          <label style="font-size: 12px; color: #ccc;">Adicionar outro dispositivo (Celular, Notebook):</label>
+          <div style="display:flex; gap:8px; margin-top:6px;">
+            <input type="text" id="add-device-input" placeholder="Ex: Meu Smartphone" style="flex:1; padding:6px; border-radius:4px; background:#121214; border:1px solid #333; color:white;">
+            <button id="btn-add-device" style="padding:6px 12px; background:#8e44ad; border:none; border-radius:4px; color:white; cursor:pointer; font-weight:bold;">Adicionar</button>
+          </div>
+        </div>
+
+        <button id="btn-logout" style="width:100%; padding:8px; background:#e74c3c; border:none; border-radius:4px; color:white; font-weight:bold; cursor:pointer; margin-top:20px;">
+          Sair da Conta
+        </button>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ⭐ JANELA MODAL DE FAVORITOS -->
+  <div id="favs-modal" class="modal-overlay hidden">
+    <div class="modal-content">
+      <button id="close-favs" class="close-btn">&times;</button>
+      <h2>⭐ Meus Favoritos</h2>
+      <div id="favs-list" class="favs-list">
+        <p style="color: #94a3b8; text-align: center; padding: 20px;">Carregando…</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- 🏆 JANELA MODAL DE CONQUISTAS -->
+  <div id="achievements-modal" class="modal-overlay hidden">
+    <div class="modal-content">
+      <button id="close-achievements" class="close-btn">&times;</button>
+      <h2>🏆 Conquistas</h2>
+      <div id="achievements-list" class="favs-list">
+        <p style="color: #94a3b8; text-align: center; padding: 20px;">Carregando…</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- 🎨 JANELA MODAL DE FUNDOS DE TELA -->
+  <div id="backgrounds-modal" class="modal-overlay hidden">
+    <div class="modal-content">
+      <button id="close-backgrounds" class="close-btn">&times;</button>
+      <h2>🎨 Fundos de Tela</h2>
+      <p id="backgrounds-hint" style="font-size:12px; color:#94a3b8; margin-bottom:10px;">
+        Suba de nível para liberar novos fundos. Clique em um fundo desbloqueado para aplicá‑lo.
+      </p>
+      <button id="btn-toggle-light" class="light-toggle-btn" type="button">
+        <span id="light-toggle-label">💡 Iluminação: Ligada</span>
+      </button>
+      <div id="backgrounds-grid" class="backgrounds-grid">
+        <p style="color: #94a3b8; text-align: center; padding: 20px;">Carregando…</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- 🏆 Toast de Notificação de Conquista -->
+  <div id="notification-toast" class="notif-toast hidden">
+    <div class="notif-icon">🏆</div>
+    <div class="notif-body">
+      <div id="notif-ach-title" class="notif-title">Conquista!</div>
+      <div id="notif-ach-desc" class="notif-desc"></div>
+    </div>
+  </div>
+
+  <script type="module" src="/src/main.js"></script>
+
+  <script>
+    setInterval(() => {
+      const v = document.getElementById('stats-count')?.textContent;
+      const mini = document.getElementById('mini-count');
+      if (v && mini) mini.textContent = v;
+    }, 500);
+  </script>
+</body>
+
+</html>

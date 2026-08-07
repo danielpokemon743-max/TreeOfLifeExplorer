@@ -1,0 +1,9 @@
+backend/venv
+backend/tree_of_life.db
+frontend/node_modules
+frontend/dist
+frontend/package1.json
+.git
+**/__pycache__
+*.pyc
+.env

@@ -1,0 +1,19 @@
+{
+  "name": "tree-of-life-explorer-frontend",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "devDependencies": {
+    "vite": "^5.2.0"
+  },
+  "dependencies": {
+    "@simplewebauthn/browser": "^13.3.0",
+    "gl-matrix": "^3.4.3",
+    "leaflet": "^1.9.4"
+  }
+}

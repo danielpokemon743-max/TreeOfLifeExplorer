@@ -1,0 +1,16 @@
+services:
+  - type: web
+    name: tree-of-life-explorer
+    runtime: docker
+    plan: free
+    dockerfilePath: ./Dockerfile
+    envVars:
+      - key: DATABASE_URL
+        sync: false
+      - key: JWT_SECRET
+        generateValue: true
+      - key: PRODUCTION
+        value: "true"
+      - key: PUBLIC_URL
+        sync: false
+    healthCheckPath: /api/health
