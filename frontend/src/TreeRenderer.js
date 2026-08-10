@@ -558,8 +558,10 @@ let dX = 0, dY = 0;
     let pinchDist = 0;
     let pinchScale = 0;
 
+    let canvasTouchActive = false;
     this.canvas.addEventListener('touchstart', (e) => {
       e.preventDefault();
+      canvasTouchActive = true;
       if (e.touches.length === 1) {
         this._drag = true;
         this._moved = false;
@@ -577,6 +579,11 @@ let dX = 0, dY = 0;
     }, { passive: false });
 
     window.addEventListener('touchmove', (e) => {
+      // Só tratamos toques que começaram dentro do canvas da árvore.
+      // Se o dedo está sobre um painel/modal, deixamos o scroll nativo rolar.
+      if (e.target !== this.canvas && !(this.canvas && this.canvas.contains(e.target))) {
+        return;
+      }
       if (e.touches.length === 1 && this._drag) {
         this._moved = true;
         this.world.x = e.touches[0].clientX - dX;
@@ -608,9 +615,10 @@ let dX = 0, dY = 0;
         // Tap curto (sem arrastar) = selecionar táxon sob o dedo.
         // O preventDefault no touchstart impede o "click" sintético, então tratamos aqui.
         const changed = e.changedTouches && e.changedTouches[0];
-        if (!wasDrag && changed && changed.clientX !== undefined) {
+        if (!wasDrag && canvasTouchActive && changed && changed.clientX !== undefined) {
           this._handleTap(changed.clientX, changed.clientY);
         }
+        canvasTouchActive = false;
       }
     });
 
