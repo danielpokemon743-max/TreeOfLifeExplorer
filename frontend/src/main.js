@@ -3468,15 +3468,25 @@ async function loadAdminPanel() {
   let users = [];
   let ip_bans = [];
   let myIp = '';
+  const stats = { users_ok: null, bans_ok: null, myip_ok: null };
   try {
     const [ru, rb, rm] = await Promise.all([fetchAdminUsers(), fetchAdminIpBans(), fetchMyIp()]);
     users = ru.users || [];
     ip_bans = rb.ip_bans || [];
     myIp = rm.ip || '';
+    stats.users_ok = ru._ok !== false;
+    stats.bans_ok = rb._ok !== false;
+    stats.myip_ok = rm._ok !== false;
   } catch (e) {
     if (adminUsersList) adminUsersList.innerHTML = '<p style="color:#e74c3c; text-align:center; padding:20px;">Erro ao carregar. Verifique sua conexão e tente novamente apertando em 🛡️ Admin.</p>';
     if (adminIpBansList) adminIpBansList.innerHTML = '<li style="color:#e74c3c; padding:8px;">Erro ao carregar.</li>';
     return;
+  }
+
+  // Diagnóstico visível: resultado de cada chamada + IPs com registro
+  if (adminMsg) {
+    adminMsg.style.color = '#2ecc71';
+    adminMsg.textContent = `✔ ${users.length} usuário(s) · ${ip_bans.length} IP(s) banidos · seu IP: ${myIp || '—'} · [users:${stats.users_ok ? 'ok' : 'erro'} bans:${stats.bans_ok ? 'ok' : 'erro'} myip:${stats.myip_ok ? 'ok' : 'erro'}]`;
   }
 
   // Botão "usar meu IP" dentro da barra de banir IP
