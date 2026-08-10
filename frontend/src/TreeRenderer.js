@@ -181,6 +181,17 @@ export class TreeRenderer {
     this._requestRender();
   }
 
+  // Zoom centrado num ponto da tela (usado por wheel, dblclick e double-tap)
+  _zoomAtPoint(clientX, clientY, factor) {
+    if (!this.world) return;
+    const newScale = Math.max(0.05, Math.min(20, this.world.scale.x * factor));
+    this.world.x = clientX - (clientX - this.world.x) * (newScale / this.world.scale.x);
+    this.world.y = clientY - (clientY - this.world.y) * (newScale / this.world.scale.x);
+    this.scale = newScale;
+    this.world.scale.set(newScale);
+    this._requestRender();
+  }
+
   // ⚡ FOCO DA CÂMERA GARANTIDO NO TÁXON PESQUISADO
   focusOnNode(node, targetScale = 1.4) {
     if (!node) return;
@@ -527,21 +538,17 @@ export class TreeRenderer {
       this._requestRender();
     });
  
-    this.canvas.addEventListener('wheel', (e) => {
+this.canvas.addEventListener('wheel', (e) => {
       e.preventDefault();
       const f = e.deltaY < 0 ? 1.15 : 0.85;
-      const newScale = Math.max(0.05, Math.min(20, this.world.scale.x * f));
- 
-      const mouseX = e.clientX;
-      const mouseY = e.clientY;
- 
-      this.world.x = mouseX - (mouseX - this.world.x) * (newScale / this.world.scale.x);
-      this.world.y = mouseY - (mouseY - this.world.y) * (newScale / this.world.scale.x);
-      this.scale = newScale;
-      this.world.scale.set(newScale);
- 
-      this._requestRender();
+      this._zoomAtPoint(e.clientX, e.clientY, f);
     }, { passive: false });
+
+    // Double-click / double-tap = zoom no ponto
+    this.canvas.addEventListener('dblclick', (e) => {
+      e.preventDefault();
+      this._zoomAtPoint(e.clientX, e.clientY, 1.6);
+    });
  
 let dX = 0, dY = 0;
 

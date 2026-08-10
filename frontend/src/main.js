@@ -336,10 +336,27 @@ function startInteractiveBackground() {
     mouse.x = -9999;
     mouse.y = -9999;
   };
+  // Suporte a touch: o dedo também interage com as partículas
+  const onTouchMove = (e) => {
+    if (e.touches.length > 0) {
+      mouse.x = e.touches[0].clientX;
+      mouse.y = e.touches[0].clientY;
+      mouse.active = true;
+    }
+  };
+  const onTouchEnd = () => {
+    mouse.active = false;
+    mouse.x = -9999;
+    mouse.y = -9999;
+  };
   document.addEventListener('mousemove', onMouseMove);
   document.addEventListener('mouseleave', onMouseLeave);
+  document.addEventListener('touchmove', onTouchMove, { passive: true });
+  document.addEventListener('touchend', onTouchEnd);
   _interactiveMouseMove = onMouseMove;
   _interactiveMouseLeave = onMouseLeave;
+  _interactiveTouchMove = onTouchMove;
+  _interactiveTouchEnd = onTouchEnd;
 
   // Raio de influência do mouse e intensidade do efeito
   const RADIUS = 160;
@@ -429,9 +446,11 @@ function startInteractiveBackground() {
   draw();
 }
 
-// Variáveis para remover os listeners do mouse ao desligar o fundo
+// Variáveis para remover os listeners do mouse/touch ao desligar o fundo
 let _interactiveMouseMove = null;
 let _interactiveMouseLeave = null;
+let _interactiveTouchMove = null;
+let _interactiveTouchEnd = null;
 
 function stopInteractiveBackground() {
   if (_interactiveRAF) {
@@ -445,6 +464,14 @@ function stopInteractiveBackground() {
   if (_interactiveMouseLeave) {
     document.removeEventListener('mouseleave', _interactiveMouseLeave);
     _interactiveMouseLeave = null;
+  }
+  if (_interactiveTouchMove) {
+    document.removeEventListener('touchmove', _interactiveTouchMove);
+    _interactiveTouchMove = null;
+  }
+  if (_interactiveTouchEnd) {
+    document.removeEventListener('touchend', _interactiveTouchEnd);
+    _interactiveTouchEnd = null;
   }
   const el = document.getElementById('interactive-bg');
   if (el) el.remove();
@@ -3348,6 +3375,37 @@ if (backgroundsModal) {
 document.addEventListener('keydown', (e) => {
   if (e.key !== 'Escape') return;
   closeAllMenus();
+});
+
+// ─── NAVEGAÇÃO POR TECLADO (PC): setas movem, +/- zoom, 0 centraliza ────────
+document.addEventListener('keydown', (e) => {
+  // Não interfere quando o usuário está digitando na busca ou em inputs
+  const t = e.target;
+  const typing = t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable);
+  if (typing && !['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(e.key)) return;
+
+  if (!renderer || !renderer.world) return;
+
+  const k = e.key;
+
+  // Seta para cima/baixo: também usada por inputs (select). Se há input focado,
+  // deixa o comportamento padrão; caso contrário, pan na árvore.
+  if (!typing && (k === 'ArrowUp' || k === 'ArrowDown' || k === 'ArrowLeft' || k === 'ArrowRight')) {
+    e.preventDefault();
+    const SPAN = 60 / (renderer.world.scale.x || 1);
+    if (k === 'ArrowLeft')  renderer.world.x += SPAN;
+    if (k === 'ArrowRight') renderer.world.x -= SPAN;
+    if (k === 'ArrowUp')    renderer.world.y += SPAN;
+    if (k === 'ArrowDown')  renderer.world.y -= SPAN;
+    renderer._requestRender();
+    return;
+  }
+
+  if (!typing) {
+    if (k === '+' || k === '=') { e.preventDefault(); renderer.zoomBy(1.25); return; }
+    if (k === '-' || k === '_') { e.preventDefault(); renderer.zoomBy(0.8); return; }
+    if (k === '0' || k === 'Home') { e.preventDefault(); renderer.resetView(); return; }
+  }
 });
 
 function closeAllMenus() {
