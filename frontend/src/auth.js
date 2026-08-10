@@ -433,6 +433,24 @@ export async function fetchAdminCheck() {
 }
 
 /**
+ * 16b. Admin: IP atual do admin logado (banir por IP sem digitar)
+ */
+export async function fetchMyIp() {
+  const token = getAuthToken();
+  if (!token) return { ip: '' };
+  try {
+    const res = await fetch(`${ADMIN_BASE}/my-ip`, {
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+    if (!res.ok) return { ip: '' };
+    const data = await res.json();
+    return { ip: data.ip || '' };
+  } catch {
+    return { ip: '' };
+  }
+}
+
+/**
  * 17. Admin: lista de usuários (nick, IP, status de ban)
  */
 export async function fetchAdminUsers() {

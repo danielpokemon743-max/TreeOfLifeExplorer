@@ -18,6 +18,7 @@ import {
   devLevelUp,
   fetchRanking,
   fetchAdminCheck,
+  fetchMyIp,
   fetchAdminUsers,
   adminBanAccount,
   adminUnbanAccount,
@@ -3458,9 +3459,24 @@ async function loadAdminPanel() {
   if (adminIpBansList) adminIpBansList.innerHTML = '<li style="color:#94a3b8; padding:8px;">Carregando…</li>';
   if (adminUsersList) adminUsersList.innerHTML = '<p style="color: #94a3b8; text-align: center; padding: 20px;">Carregando…</p>';
 
-  const { users } = await fetchAdminUsers();
-  const { ip_bans } = await fetchAdminIpBans();
+  let users = [];
+  let ip_bans = [];
+  let myIp = '';
+  try {
+    const [ru, rb, rm] = await Promise.all([fetchAdminUsers(), fetchAdminIpBans(), fetchMyIp()]);
+    users = ru.users || [];
+    ip_bans = rb.ip_bans || [];
+    myIp = rm.ip || '';
+  } catch (e) {
+    if (adminUsersList) adminUsersList.innerHTML = '<p style="color:#e74c3c; text-align:center; padding:20px;">Erro ao carregar. Verifique sua conexão e tente novamente apertando em 🛡️ Admin.</p>';
+    if (adminIpBansList) adminIpBansList.innerHTML = '<li style="color:#e74c3c; padding:8px;">Erro ao carregar.</li>';
+    return;
+  }
 
+  // Botão "usar meu IP" dentro da barra de banir IP
+  fillBanIpWeaponry(myIp);
+
+  // ── Lista de IPs banidos ──
   if (adminIpBansList) {
     adminIpBansList.innerHTML = '';
     if (!ip_bans || ip_bans.length === 0) {
@@ -3479,12 +3495,14 @@ async function loadAdminPanel() {
     adminIpBansList.querySelectorAll('.admin-unban-ip-btn').forEach(btn => {
       btn.addEventListener('click', async () => {
         const ip = btn.dataset.ip;
-        await adminUnbanIp(ip);
+        const res = await adminUnbanIp(ip);
+        if (!res.ok && res.detail) alert(res.detail);
         await loadAdminPanel();
       });
     });
   }
 
+  // ── Lista de usuários ──
   if (adminUsersList) {
     adminUsersList.innerHTML = '';
     if (!users || users.length === 0) {
@@ -3492,21 +3510,35 @@ async function loadAdminPanel() {
     } else {
       users.forEach(u => {
         if (u.is_admin) return; // não mostra admin na lista de banimento
+        const knownIp = u.last_ip && u.last_ip !== 'desconhecido' ? u.last_ip : '';
         const item = document.createElement('div');
         item.className = 'admin-user-item' + (u.is_banned ? ' banned' : '');
-        item.style.cssText = 'display:flex; align-items:center; gap:8px; padding:8px 10px; margin-bottom:6px; background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.08); border-radius:8px;';
+        item.style.cssText = 'display:flex; align-items:center; gap:8px; padding:8px 10px; margin-bottom:6px; background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.08); border-radius:8px; flex-wrap:wrap;';
         item.innerHTML = `
-          <div style="flex:1; min-width:0;">
+          <div style="flex:1; min-width:120px;">
             <strong style="font-size:13px; ${u.is_banned ? 'color:#e74c3c; text-decoration:line-through;' : 'color:#f0f0f8;'}">${esc(u.display_name)}</strong>
             <div style="font-size:11px; color:#94a3b8;">${esc(u.country || '—')} · IP: <code>${esc(u.last_ip || 'desconhecido')}</code> · Nv ${u.level} · 🏆 ${u.achievements_count}</div>
           </div>
-          ${u.is_banned
-            ? `<button class="action-btn admin-unban-user-btn" data-id="${escAttr(u.id)}" style="background:#3498db; font-size:11px; padding:4px 10px;">Desbanir</button>`
-            : `<button class="action-btn admin-ban-user-btn" data-id="${escAttr(u.id)}" style="background:#e74c3c; font-size:11px; padding:4px 10px;">Banir</button>`}
+          <div style="display:flex; gap:6px; flex-wrap:wrap;">
+            ${knownIp ? `<button class="action-btn admin-ban-ip-btn" data-ip="${escAttr(knownIp)}" title="Banir este IP (impede cadastro/login dele)" style="background:#e67e22; font-size:11px; padding:4px 10px;">🚫 IP ${esc(knownIp)}</button>` : ''}
+            ${u.is_banned
+              ? `<button class="action-btn admin-unban-user-btn" data-id="${escAttr(u.id)}" style="background:#3498db; font-size:11px; padding:4px 10px;">Desbanir conta</button>`
+              : `<button class="action-btn admin-ban-user-btn" data-id="${escAttr(u.id)}" style="background:#e74c3c; font-size:11px; padding:4px 10px;">Banir conta</button>`}
+          </div>
         `;
         adminUsersList.appendChild(item);
       });
 
+      adminUsersList.querySelectorAll('.admin-ban-ip-btn').forEach(btn => {
+        btn.addEventListener('click', async () => {
+          const ip = btn.dataset.ip;
+          const msg = `Banir o IP ${ip}? Ele não poderá criar conta nem fazer login neste IP.`;
+          if (!confirm(msg)) return;
+          const res = await adminBanIp(ip, 'Banido pelo admin');
+          if (!res.ok && res.detail) alert(res.detail);
+          await loadAdminPanel();
+        });
+      });
       adminUsersList.querySelectorAll('.admin-ban-user-btn').forEach(btn => {
         btn.addEventListener('click', async () => {
           if (!confirm('Banir este usuário? Ele não poderá mais fazer login.')) return;
@@ -3523,6 +3555,27 @@ async function loadAdminPanel() {
         });
       });
     }
+  }
+}
+
+// Preenche o campo de IP com o IP do admin logado + botão de atalho
+function fillBanIpWeaponry(myIp) {
+  const btnUseMyIp = document.getElementById('btn-admin-use-my-ip');
+  const myIpLabel = document.getElementById('admin-my-ip-label');
+  if (myIpLabel) {
+    myIpLabel.innerHTML = myIp
+      ? `📡 Seu IP atual: <code style="color:#2ecc71;">${esc(myIp)}</code> — use o botão para banir seu próprio IP se necessário.`
+      : '';
+  }
+  if (btnUseMyIp && myIp) {
+    btnUseMyIp.onclick = () => {
+      if (!confirm(`Banir seu IP atual (${myIp})? Você não poderá mais criar conta ou logar deste acesso.`)) return;
+      (async () => {
+        const res = await adminBanIp(myIp, 'Banido pelo admin');
+        if (!res.ok && res.detail) alert(res.detail);
+        await loadAdminPanel();
+      })();
+    };
   }
 }
 

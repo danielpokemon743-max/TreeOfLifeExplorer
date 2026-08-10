@@ -1,6 +1,6 @@
 import uuid
 from datetime import datetime, timezone
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func as sa_func
@@ -8,7 +8,7 @@ from sqlalchemy import select, func as sa_func
 from app.database import get_db
 from app.models import User, IpBan, Achievement, Discovery
 from app.security import get_current_user_id
-from app.routers.auth import is_admin_user
+from app.routers.auth import is_admin_user, client_ip
 from app.routers.progress import level_from_xp
 
 router = APIRouter(prefix="/api/admin", tags=["Admin"])
@@ -29,6 +29,16 @@ async def check_admin(
     """Informa se o usuário logado é admin (sem expor dados)."""
     user = await db.get(User, current_user_id)
     return {"is_admin": is_admin_user(user)}
+
+@router.get("/my-ip")
+async def my_ip(
+    request: Request,
+    current_user_id: uuid.UUID = Depends(get_current_user_id),
+    db: AsyncSession = Depends(get_db),
+):
+    """Retorna o IP atual do admin logado (para banir sem digitar manualmente)."""
+    await _require_admin(db, current_user_id)
+    return {"ip": client_ip(request)}
 
 @router.get("/users")
 async def list_users(
