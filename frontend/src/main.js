@@ -206,7 +206,9 @@ function applyBackground(id) {
   _selectedBgId = id;
   localStorage.setItem('tol_selected_bg', id);
 
-  document.body.style.cssText = bg.css;
+  // Aplica o gradiente do fundo + sempre garante cor de fundo escura de fallback
+  // (se o gradiente falhar/cancelar, o site nunca fica branco)
+  document.body.style.cssText = bg.css + '; background-color: #07070f;';
   document.body.style.color = 'var(--text)';
   console.log('[Fundo] body.style agora =', document.body.getAttribute('style'));
 
@@ -2786,7 +2788,7 @@ function ensureBackground() {
       if (!document.body.style.background) {
         const bg = LEVEL_BACKGROUNDS.find(b => b.id === _selectedBgId);
         if (bg) {
-          document.body.style.cssText = bg.css;
+          document.body.style.cssText = bg.css + '; background-color: #07070f;';
           if (bg.interactive) startInteractiveBackground();
           startPulse(bg.id);
         }
@@ -2804,7 +2806,7 @@ function ensureBackground() {
     console.log('[Fundo] Selecionando melhor fundo p/ nível', level, '→', best.id, best.name);
     _selectedBgId = best.id;
     localStorage.setItem('tol_selected_bg', best.id);
-    document.body.style.cssText = best.css;
+    document.body.style.cssText = best.css + '; background-color: #07070f;';
     if (best.interactive) startInteractiveBackground();
     else stopInteractiveBackground();
     startPulse(best.id);
