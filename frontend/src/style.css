@@ -131,6 +131,19 @@ body {
   touch-action: manipulation;
   -webkit-tap-highlight-color: transparent;
 }
+
+#tol-version {
+  flex-shrink: 0;
+  font-size: 0.6rem;
+  letter-spacing: 0.04em;
+  color: rgba(255,255,255,0.35);
+  background: rgba(255,255,255,0.05);
+  border: 1px solid rgba(255,255,255,0.12);
+  border-radius: 8px;
+  padding: 2px 7px;
+  margin-left: auto;
+  user-select: none;
+}
 .collapse-btn:hover {
   background: var(--purple);
   border-color: var(--purple);
@@ -147,7 +160,8 @@ body {
 }
 .top-bar.collapsed .logo,
 .top-bar.collapsed .search-wrap,
-.top-bar.collapsed .controls {
+.top-bar.collapsed .controls,
+.top-bar.collapsed #tol-version {
   display: none;
 }
 .top-bar.collapsed .collapse-btn {
