@@ -2,6 +2,8 @@ import { startRegistration, startAuthentication } from '@simplewebauthn/browser'
 
 const API_BASE = '/api/auth';
 const PROGRESS_BASE = '/api/progress';
+const RANKING_BASE = '/api/ranking';
+const ADMIN_BASE = '/api/admin';
 
 export function getAuthToken() {
   return localStorage.getItem('passkey_auth_token');
@@ -30,11 +32,11 @@ async function safeJson(res) {
 /**
  * 1. Registro de Usuário (nick + senha) + Passkey
  */
-export async function registerPasskey(displayName, password, deviceName) {
+export async function registerPasskey(displayName, password, deviceName, country = '') {
   const startRes = await fetch(`${API_BASE}/register/start`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ display_name: displayName, password, device_name: deviceName })
+    body: JSON.stringify({ display_name: displayName, password, device_name: deviceName, country })
   });
 
   if (!startRes.ok) {
@@ -400,6 +402,137 @@ export async function devLevelUp(levels = 10) {
   }
 }
 
+/**
+ * 15. Ranking Global (público — não precisa de token)
+ */
+export async function fetchRanking(sort = 'xp') {
+  try {
+    const res = await fetch(`${RANKING_BASE}?sort=${encodeURIComponent(sort)}`);
+    if (!res.ok) return { ranking: [], sort, total: 0 };
+    return await res.json();
+  } catch {
+    return { ranking: [], sort, total: 0 };
+  }
+}
+
+/**
+ * 16. Admin: o usuário logado é admin?
+ */
+export async function fetchAdminCheck() {
+  const token = getAuthToken();
+  if (!token) return { is_admin: false };
+  try {
+    const res = await fetch(`${ADMIN_BASE}/check`, {
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+    if (!res.ok) return { is_admin: false };
+    return await res.json();
+  } catch {
+    return { is_admin: false };
+  }
+}
+
+/**
+ * 17. Admin: lista de usuários (nick, IP, status de ban)
+ */
+export async function fetchAdminUsers() {
+  const token = getAuthToken();
+  if (!token) return { users: [] };
+  try {
+    const res = await fetch(`${ADMIN_BASE}/users`, {
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+    if (!res.ok) return { users: [] };
+    return await res.json();
+  } catch {
+    return { users: [] };
+  }
+}
+
+/**
+ * 18. Admin: banir / desbanir conta
+ */
+export async function adminBanAccount(userId) {
+  const token = getAuthToken();
+  if (!token) return { ok: false };
+  try {
+    const res = await fetch(`${ADMIN_BASE}/ban`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+      body: JSON.stringify({ user_id: userId })
+    });
+    const data = await res.json();
+    return { ok: res.ok, detail: data.detail || '' };
+  } catch {
+    return { ok: false, detail: 'Erro de rede' };
+  }
+}
+
+export async function adminUnbanAccount(userId) {
+  const token = getAuthToken();
+  if (!token) return { ok: false };
+  try {
+    const res = await fetch(`${ADMIN_BASE}/unban`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+      body: JSON.stringify({ user_id: userId })
+    });
+    const data = await res.json();
+    return { ok: res.ok, detail: data.detail || '' };
+  } catch {
+    return { ok: false, detail: 'Erro de rede' };
+  }
+}
+
+/**
+ * 19. Admin: banir / listar / desbanir IPs
+ */
+export async function adminBanIp(ip, reason = '') {
+  const token = getAuthToken();
+  if (!token) return { ok: false };
+  try {
+    const res = await fetch(`${ADMIN_BASE}/ip-bans`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+      body: JSON.stringify({ ip, reason })
+    });
+    const data = await res.json();
+    return { ok: res.ok, detail: data.detail || '' };
+  } catch {
+    return { ok: false, detail: 'Erro de rede' };
+  }
+}
+
+export async function fetchAdminIpBans() {
+  const token = getAuthToken();
+  if (!token) return { ip_bans: [] };
+  try {
+    const res = await fetch(`${ADMIN_BASE}/ip-bans`, {
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+    if (!res.ok) return { ip_bans: [] };
+    return await res.json();
+  } catch {
+    return { ip_bans: [] };
+  }
+}
+
+export async function adminUnbanIp(ip) {
+  const token = getAuthToken();
+  if (!token) return { ok: false };
+  try {
+    const res = await fetch(`${ADMIN_BASE}/ip-bans/unban`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+      body: JSON.stringify({ ip })
+    });
+    const data = await res.json();
+    return { ok: res.ok, detail: data.detail || '' };
+  } catch {
+    return { ok: false, detail: 'Erro de rede' };
+  }
+}
+
 const ACHIEVEMENT_NAMES = {
   "PRIMEIRA_DESCOBERTA": "Primeira Descoberta",
   "CINCO_DESCOBERTAS": "Colecionador Iniciante",
@@ -469,3 +602,19 @@ const ACHIEVEMENT_DESCRIPTIONS = {
 };
 
 export { ACHIEVEMENT_NAMES, ACHIEVEMENT_DESCRIPTIONS };
+
+/**
+ * Lista de países para a seleção no cadastro (nome em português → guardado no banco).
+ */
+export const COUNTRIES = [
+  "Brasil", "Portugal", "Moçambique", "Angola", "Cabo Verde", "Guiné-Bissau",
+  "São Tomé e Príncipe", "Timor-Leste", "Argentina", "Chile", "Uruguai",
+  "Paraguai", "Bolívia", "Peru", "Equador", "Colômbia", "Venezuela", "Guiana",
+  "Suriname", "México", "Cuba", "Estados Unidos", "Canadá",
+  "Espanha", "França", "Itália", "Alemanha", "Reino Unido", "Suíça",
+  "Países Baixos", "Bélgica", "Irlanda", "Suécia", "Noruega", "Dinamarca",
+  "Finlândia", "Polônia", "Ucrânia", "Rússia", "Japão", "China", "Coreia do Sul",
+  "Índia", "Austrália", "Nova Zelândia", "África do Sul", "Nigéria", "Egito",
+  "Marrocos", "Quênia", "Gana", "Senegal", "Israel", "Turquia", "Arábia Saudita",
+  "Emirados Árabes Unidos", "Outro",
+];

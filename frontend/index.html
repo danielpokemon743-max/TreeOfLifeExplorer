@@ -37,6 +37,7 @@
     </div>
 
     <div class="controls" role="toolbar">
+      <button class="ctrl-btn" id="btn-ranking-page" title="Ranking Global">🏅</button>
       <button class="ctrl-btn" id="btn-favs-page" title="Meus Favoritos">⭐</button>
       <button class="ctrl-btn" id="btn-achievements-page" title="Conquistas">🏆</button>
       <button class="ctrl-btn" id="btn-backgrounds-page" title="Fundos de Tela">🎨</button>
@@ -240,6 +241,13 @@
           <input type="text" id="auth-device-name" placeholder="Ex: Computador Pessoal" style="width:100%; padding:8px; margin-top:4px; border-radius:4px; background:#121214; border:1px solid #333; color:white;">
         </div>
 
+        <div style="margin-bottom: 16px;">
+          <label style="font-size: 13px; color: #ccc;">🌍 País de Origem (exibido no Ranking Global):</label>
+          <select id="auth-country" style="width:100%; padding:8px; margin-top:4px; border-radius:4px; background:#121214; border:1px solid #333; color:white;">
+            <option value="">— Selecione seu país —</option>
+          </select>
+        </div>
+
         <button id="btn-register-passkey" style="width:100%; padding:10px; background:#2ecc71; border:none; border-radius:4px; color:white; font-weight:bold; cursor:pointer; margin-bottom:10px;">
           ✨ Criar Conta (Nick + Senha + Passkey)
         </button>
@@ -290,6 +298,63 @@
         <button id="btn-logout" style="width:100%; padding:8px; background:#e74c3c; border:none; border-radius:4px; color:white; font-weight:bold; cursor:pointer; margin-top:20px;">
           Sair da Conta
         </button>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- 🏅 JANELA MODAL DE RANKING GLOBAL + ADMIN -->
+  <div id="ranking-modal" class="modal-overlay hidden">
+    <div class="modal-content">
+      <button id="close-ranking" class="close-btn">&times;</button>
+      <h2>🏅 Ranking Global</h2>
+      <!-- Abas: Ranking público / Admin (visível só para admins) -->
+      <div class="ranking-tabs">
+        <button id="tab-ranking" class="ranking-tab active">🏆 Jogadores</button>
+        <button id="tab-admin" class="ranking-tab hidden" title="Administração de banimentos">🛡️ Admin</button>
+      </div>
+
+      <!-- Aba Ranking -->
+      <div id="ranking-tab-body">
+        <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin:12px 0;">
+          <span style="font-size:12px; color:#94a3b8;">Ordenar por:</span>
+          <button class="ranking-sort-btn active" data-sort="xp">XP</button>
+          <button class="ranking-sort-btn" data-sort="level">Nível</button>
+          <button class="ranking-sort-btn" data-sort="achievements">Conquistas</button>
+          <button class="ranking-sort-btn" data-sort="hours">Horas</button>
+        </div>
+        <div id="ranking-list" class="ranking-list">
+          <p style="color: #94a3b8; text-align: center; padding: 20px;">Carregando…</p>
+        </div>
+      </div>
+
+      <!-- Aba Admin -->
+      <div id="admin-tab-body" class="hidden">
+        <div style="margin:12px 0; padding:10px; background:rgba(231,76,60,0.08); border:1px solid rgba(231,76,60,0.3); border-radius:8px;">
+          <h4 style="margin:0 0 6px; font-size:14px;">🖥️ Banir por IP</h4>
+          <p style="font-size:12px; color:#bbb; margin:0 0 8px;">
+            O IP banido <strong>não poderá criar conta nem fazer login</strong>, mas ainda poderá usar o site sem logar.
+          </p>
+          <div style="display:flex; gap:8px; flex-wrap:wrap;">
+            <input type="text" id="admin-ban-ip" placeholder="Ex: 189.10.20.30" style="flex:1; min-width:150px; padding:8px; border-radius:4px; background:#121214; border:1px solid #333; color:white;">
+            <input type="text" id="admin-ban-ip-reason" placeholder="Motivo (opcional)" style="flex:1; min-width:120px; padding:8px; border-radius:4px; background:#121214; border:1px solid #333; color:white;">
+            <button id="btn-admin-ban-ip" class="action-btn" style="background:#e74c3c;">Banir IP</button>
+          </div>
+        </div>
+
+        <h4 style="font-size:14px; margin-bottom:8px;">🚫 IPs Banidos</h4>
+        <ul id="admin-ip-bans-list" style="list-style:none; padding:0; margin:0 0 16px; font-size:12px;">
+          <li style="color:#94a3b8; padding:8px;">Carregando…</li>
+        </ul>
+
+        <h4 style="font-size:14px; margin-bottom:8px;">👥 Usuários Cadastrados</h4>
+        <p style="font-size:12px; color:#888; margin:0 0 8px;">
+          Clique em <strong>Banir</strong> para proibir o login daquela conta; <strong>Desbanir</strong> libera novamente.
+        </p>
+        <div id="admin-users-list" class="ranking-list">
+          <p style="color: #94a3b8; text-align: center; padding: 20px;">Carregando…</p>
+        </div>
+        <p id="admin-msg" style="font-size:12px; color:#2ecc71; margin-top:8px;"></p>
       </div>
 
     </div>

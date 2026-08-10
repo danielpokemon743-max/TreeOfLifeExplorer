@@ -16,6 +16,15 @@ import {
   fetchUserProgress,
   reportSessionTime,
   devLevelUp,
+  fetchRanking,
+  fetchAdminCheck,
+  fetchAdminUsers,
+  adminBanAccount,
+  adminUnbanAccount,
+  adminBanIp,
+  fetchAdminIpBans,
+  adminUnbanIp,
+  COUNTRIES,
   ACHIEVEMENT_NAMES,
   ACHIEVEMENT_DESCRIPTIONS
 } from './auth.js';
@@ -108,6 +117,25 @@ const btnRegisterPasskey = document.getElementById('btn-register-passkey');
 const btnLoginPasskey    = document.getElementById('btn-login-passkey');
 const btnAddDevice       = document.getElementById('btn-add-device');
 const btnLogout          = document.getElementById('btn-logout');
+
+// Ranking Global + Admin
+const btnRankingPage     = document.getElementById('btn-ranking-page');
+const rankingModal       = document.getElementById('ranking-modal');
+const closeRankingBtn    = document.getElementById('close-ranking');
+const rankingList        = document.getElementById('ranking-list');
+const tabRanking         = document.getElementById('tab-ranking');
+const tabAdmin           = document.getElementById('tab-admin');
+const rankingTabBody     = document.getElementById('ranking-tab-body');
+const adminTabBody       = document.getElementById('admin-tab-body');
+const adminUsersList     = document.getElementById('admin-users-list');
+const adminIpBansList    = document.getElementById('admin-ip-bans-list');
+const btnAdminBanIp      = document.getElementById('btn-admin-ban-ip');
+const adminBanIpInput    = document.getElementById('admin-ban-ip');
+const adminBanIpReason   = document.getElementById('admin-ban-ip-reason');
+const adminMsg           = document.getElementById('admin-msg');
+const authCountrySelect  = document.getElementById('auth-country');
+let _currentSort = 'xp';
+let _isAdminUser = false;
  
 // ─── ESTADO GLOBAL ───────────────────────────────────────────────────────────
 // Palavras bloqueadas em nicks (mesma lógica do backend)
@@ -2743,10 +2771,14 @@ async function updateAuthUI() {
     }
  
     if (btnAuth) btnAuth.style.border = '2px solid #2ecc71';
+    _isAdminUser = !!currentProfile.is_admin;
+    if (tabAdmin) tabAdmin.classList.toggle('hidden', !_isAdminUser);
   } else {
     if (authUnlogged) authUnlogged.style.display = 'block';
     if (authLogged) authLogged.style.display = 'none';
     if (btnAuth) btnAuth.style.border = 'none';
+    _isAdminUser = false;
+    if (tabAdmin) tabAdmin.classList.add('hidden');
   }
 }
 
@@ -2861,6 +2893,7 @@ if (btnRegisterPasskey) {
     const dispName = dispNameEl ? dispNameEl.value.trim() : '';
     const password = passEl ? passEl.value : '';
     const devName = (devNameEl && devNameEl.value.trim()) || 'Navegador Web';
+    const country = authCountrySelect ? authCountrySelect.value : '';
 
     if (!dispName) return alert('Por favor, escolha um nick.');
     if (!password) return alert('Defina uma senha para sua conta.');
@@ -2869,7 +2902,7 @@ if (btnRegisterPasskey) {
     }
 
     try {
-      await registerPasskey(dispName, password, devName);
+      await registerPasskey(dispName, password, devName, country);
       sounds.playSFX('success');
       alert('Conta criada com sucesso!');
       await updateAuthUI();
@@ -3340,6 +3373,198 @@ if (achievementsModal) {
   });
 }
 
+// ─── PÁGINA DE RANKING GLOBAL + ADMIN ───────────────────────────────────────
+if (authCountrySelect && COUNTRIES && COUNTRIES.length) {
+  COUNTRIES.forEach(c => {
+    const opt = document.createElement('option');
+    opt.value = c;
+    opt.textContent = c;
+    authCountrySelect.appendChild(opt);
+  });
+}
+
+function medalFor(position) {
+  if (position === 1) return '🥇';
+  if (position === 2) return '🥈';
+  if (position === 3) return '🥉';
+  return `#${position}`;
+}
+
+function formatHours(hours) {
+  if (!hours || hours < 0.05) return '0h';
+  return `${hours}h`;
+}
+
+async function openRankingPage(sort = _currentSort) {
+  if (rankingModal) rankingModal.classList.remove('hidden');
+  _currentSort = sort || 'xp';
+
+  // Sincroniza botões de ordenação
+  document.querySelectorAll('.ranking-sort-btn').forEach(b => {
+    b.classList.toggle('active', b.dataset.sort === _currentSort);
+  });
+
+  if (rankingList) rankingList.innerHTML = '<p style="color: #94a3b8; text-align: center; padding: 20px;">Carregando…</p>';
+
+  const { ranking } = await fetchRanking(_currentSort);
+  if (!rankingList) return;
+
+  rankingList.innerHTML = '';
+  if (!ranking || ranking.length === 0) {
+    rankingList.innerHTML = '<p style="color: #94a3b8; text-align: center; padding: 20px;">Ainda não há jogadores no ranking. Crie uma conta e explore!</p>';
+    return;
+  }
+
+  ranking.forEach(u => {
+    const item = document.createElement('div');
+    item.className = 'ranking-item' + (u.position <= 3 ? ' top' : '');
+    item.style.cssText = 'display:flex; align-items:center; gap:10px; padding:10px 12px; margin-bottom:8px; background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.08); border-radius:10px;';
+    item.innerHTML = `
+      <div style="width:38px; text-align:center; font-size:16px; flex-shrink:0;">${medalFor(u.position)}</div>
+      <div style="flex:1; min-width:0;">
+        <strong style="font-size:14px; color:#f0f0f8;">${esc(u.display_name)}</strong>
+        <div style="font-size:11px; color:#94a3b8;">${esc(u.country || '🌐 País não informado')}</div>
+      </div>
+      <div style="text-align:right; flex-shrink:0;">
+        <div style="font-size:13px; color:#f1c40f; font-weight:bold;">Nv ${u.level}</div>
+        <div style="font-size:11px; color:#94a3b8;">${u.xp} XP</div>
+      </div>
+      <div style="text-align:right; flex-shrink:0; font-size:11px; color:#2ecc71;">
+        <div>🏆 ${u.achievements_count}</div>
+        <div>⏱ ${formatHours(u.hours)}</div>
+      </div>
+    `;
+    rankingList.appendChild(item);
+  });
+}
+
+function showAdminTab() {
+  if (tabRanking) tabRanking.classList.remove('active');
+  if (tabAdmin) tabAdmin.classList.add('active');
+  if (rankingTabBody) rankingTabBody.classList.add('hidden');
+  if (adminTabBody) adminTabBody.classList.remove('hidden');
+  loadAdminPanel();
+}
+
+function showRankingTab() {
+  if (tabAdmin) tabAdmin.classList.remove('active');
+  if (tabRanking) tabRanking.classList.add('active');
+  if (adminTabBody) adminTabBody.classList.add('hidden');
+  if (rankingTabBody) rankingTabBody.classList.remove('hidden');
+}
+
+async function loadAdminPanel() {
+  if (adminMsg) adminMsg.textContent = '';
+  if (adminIpBansList) adminIpBansList.innerHTML = '<li style="color:#94a3b8; padding:8px;">Carregando…</li>';
+  if (adminUsersList) adminUsersList.innerHTML = '<p style="color: #94a3b8; text-align: center; padding: 20px;">Carregando…</p>';
+
+  const { users } = await fetchAdminUsers();
+  const { ip_bans } = await fetchAdminIpBans();
+
+  if (adminIpBansList) {
+    adminIpBansList.innerHTML = '';
+    if (!ip_bans || ip_bans.length === 0) {
+      adminIpBansList.innerHTML = '<li style="color:#94a3b8; padding:8px;">Nenhum IP banido.</li>';
+    } else {
+      ip_bans.forEach(b => {
+        const li = document.createElement('li');
+        li.style.cssText = 'display:flex; align-items:center; justify-content:space-between; gap:8px; padding:6px 8px; background:rgba(231,76,60,0.08); border-radius:6px; margin-bottom:6px;';
+        li.innerHTML = `
+          <span>🖥️ <code style="color:#e74c3c;">${esc(b.ip)}</code>${b.reason ? ` <span style="color:#888; font-size:11px;">— ${esc(b.reason)}</span>` : ''}</span>
+          <button class="action-btn admin-unban-ip-btn" data-ip="${escAttr(b.ip)}" style="background:#3498db; font-size:11px; padding:4px 10px;">Desbanir</button>
+        `;
+        adminIpBansList.appendChild(li);
+      });
+    }
+    adminIpBansList.querySelectorAll('.admin-unban-ip-btn').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        const ip = btn.dataset.ip;
+        await adminUnbanIp(ip);
+        await loadAdminPanel();
+      });
+    });
+  }
+
+  if (adminUsersList) {
+    adminUsersList.innerHTML = '';
+    if (!users || users.length === 0) {
+      adminUsersList.innerHTML = '<p style="color:#94a3b8; text-align:center; padding:20px;">Nenhum usuário.</p>';
+    } else {
+      users.forEach(u => {
+        if (u.is_admin) return; // não mostra admin na lista de banimento
+        const item = document.createElement('div');
+        item.className = 'admin-user-item' + (u.is_banned ? ' banned' : '');
+        item.style.cssText = 'display:flex; align-items:center; gap:8px; padding:8px 10px; margin-bottom:6px; background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.08); border-radius:8px;';
+        item.innerHTML = `
+          <div style="flex:1; min-width:0;">
+            <strong style="font-size:13px; ${u.is_banned ? 'color:#e74c3c; text-decoration:line-through;' : 'color:#f0f0f8;'}">${esc(u.display_name)}</strong>
+            <div style="font-size:11px; color:#94a3b8;">${esc(u.country || '—')} · IP: <code>${esc(u.last_ip || 'desconhecido')}</code> · Nv ${u.level} · 🏆 ${u.achievements_count}</div>
+          </div>
+          ${u.is_banned
+            ? `<button class="action-btn admin-unban-user-btn" data-id="${escAttr(u.id)}" style="background:#3498db; font-size:11px; padding:4px 10px;">Desbanir</button>`
+            : `<button class="action-btn admin-ban-user-btn" data-id="${escAttr(u.id)}" style="background:#e74c3c; font-size:11px; padding:4px 10px;">Banir</button>`}
+        `;
+        adminUsersList.appendChild(item);
+      });
+
+      adminUsersList.querySelectorAll('.admin-ban-user-btn').forEach(btn => {
+        btn.addEventListener('click', async () => {
+          if (!confirm('Banir este usuário? Ele não poderá mais fazer login.')) return;
+          const res = await adminBanAccount(btn.dataset.id);
+          if (!res.ok && res.detail) alert(res.detail);
+          await loadAdminPanel();
+        });
+      });
+      adminUsersList.querySelectorAll('.admin-unban-user-btn').forEach(btn => {
+        btn.addEventListener('click', async () => {
+          const res = await adminUnbanAccount(btn.dataset.id);
+          if (!res.ok && res.detail) alert(res.detail);
+          await loadAdminPanel();
+        });
+      });
+    }
+  }
+}
+
+if (btnRankingPage) {
+  btnRankingPage.addEventListener('click', async () => {
+    sounds.playSFX('click');
+    openRankingPage(_currentSort);
+    const check = await fetchAdminCheck();
+    _isAdminUser = check.is_admin;
+    if (tabAdmin) tabAdmin.classList.toggle('hidden', !_isAdminUser);
+    if (!_isAdminUser) showRankingTab();
+  });
+}
+
+if (rankingModal) {
+  rankingModal.addEventListener('click', (e) => {
+    if (e.target === rankingModal) rankingModal.classList.add('hidden');
+  });
+}
+if (closeRankingBtn && rankingModal) {
+  closeRankingBtn.addEventListener('click', () => rankingModal.classList.add('hidden'));
+}
+if (tabRanking) tabRanking.addEventListener('click', showRankingTab);
+if (tabAdmin) tabAdmin.addEventListener('click', showAdminTab);
+
+document.querySelectorAll('.ranking-sort-btn').forEach(btn => {
+  btn.addEventListener('click', () => openRankingPage(btn.dataset.sort));
+});
+
+if (btnAdminBanIp) {
+  btnAdminBanIp.addEventListener('click', async () => {
+    const ip = (adminBanIpInput ? adminBanIpInput.value.trim() : '');
+    const reason = (adminBanIpReason ? adminBanIpReason.value.trim() : '');
+    if (!ip) return alert('Informe um endereço de IP para banir.');
+    const res = await adminBanIp(ip, reason);
+    if (!res.ok && res.detail) alert(res.detail);
+    if (adminBanIpInput) adminBanIpInput.value = '';
+    if (adminBanIpReason) adminBanIpReason.value = '';
+    await loadAdminPanel();
+  });
+}
+
 // ─── PÁGINA DE FUNDOS DE TELA ───────────────────────────────────────────────
 function openBackgroundsPage() {
   if (!backgroundsModal) return;
@@ -3456,6 +3681,7 @@ function closeAllMenus() {
   if (favsModal) favsModal.classList.add('hidden');
   if (achievementsModal) achievementsModal.classList.add('hidden');
   if (backgroundsModal) backgroundsModal.classList.add('hidden');
+  if (rankingModal) rankingModal.classList.add('hidden');
   if (statsPanel) statsPanel.classList.add('hidden');
   currentSelectedNode = null;
   closeAutocomplete();

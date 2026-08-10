@@ -24,6 +24,14 @@ class Settings(BaseSettings):
     # Em produção (true), desliga comandos de desenvolvimento (ex.: /level-dev)
     PRODUCTION: bool = False
 
+    # Nicks (separados por vírgula) que têm acesso ao painel de administração
+    # (banir contas/IPs e ver o ranking). Ex: "Nutelloso" ou "Nutelloso,Admin"
+    ADMIN_NICKS: str = ""
+
+    @property
+    def admin_nicks(self) -> list[str]:
+        return [n.strip() for n in (self.ADMIN_NICKS or "").split(",") if n.strip()]
+
     @property
     def jwt_secret_or_default(self) -> str:
         return self.JWT_SECRET

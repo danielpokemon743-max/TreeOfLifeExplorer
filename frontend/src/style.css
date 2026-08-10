@@ -1098,3 +1098,60 @@ html { --lx: 50%; --ly: 35%; --lc: 0.5; --lr: 255; --lg: 255; --lb: 255; }
     padding: 0.35rem 0.5rem !important;
   }
 }
+
+/* ─── RANKING GLOBAL + ADMIN ─────────────────────────────────────────────── */
+.ranking-tabs {
+  display: flex;
+  gap: 8px;
+  margin: 10px 0 4px;
+}
+.ranking-tab {
+  flex: 1;
+  padding: 9px;
+  border: 1px solid rgba(255,255,255,0.12);
+  border-radius: 8px;
+  background: rgba(255,255,255,0.04);
+  color: var(--muted);
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 600;
+  transition: var(--transition);
+}
+.ranking-tab.active {
+  background: rgba(155, 89, 182, 0.25);
+  border-color: var(--purple);
+  color: #fff;
+}
+.ranking-tab.hidden {
+  display: none;
+}
+.ranking-sort-btn {
+  padding: 5px 12px;
+  border: 1px solid rgba(255,255,255,0.12);
+  border-radius: 20px;
+  background: rgba(255,255,255,0.04);
+  color: var(--muted);
+  cursor: pointer;
+  font-size: 12px;
+  transition: var(--transition);
+}
+.ranking-sort-btn.active {
+  background: rgba(46, 204, 113, 0.2);
+  border-color: #2ecc71;
+  color: #2ecc71;
+}
+.ranking-list {
+  max-height: 55vh;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+.ranking-item {
+  transition: background 0.2s;
+}
+.ranking-item.top {
+  background: rgba(241, 196, 15, 0.06) !important;
+  border-color: rgba(241, 196, 15, 0.25) !important;
+}
+.admin-user-item.banned {
+  opacity: 0.7;
+}

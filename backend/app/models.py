@@ -20,6 +20,12 @@ class User(Base):
     xp: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
     # Tempo ativo total no site (segundos) — alimenta conquistas de tempo
     total_time_seconds: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    # País de origem escolhido no cadastro (nome legível, ex: "Brasil")
+    country: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
+    # Endereço IP do último acesso (usado pelo admin para bans por IP)
+    last_ip: Mapped[Optional[str]] = mapped_column(String(64), nullable=True)
+    # Conta banida por um admin (banned): bloqueia login e ações logadas
+    is_banned: Mapped[bool] = mapped_column(default=False, nullable=False)
 
     # Relacionamento de Autenticação (Múltiplas Passkeys por usuário)
     passkeys: Mapped[List["Passkey"]] = relationship(back_populates="user", cascade="all, delete-orphan")
@@ -100,3 +106,13 @@ class UserSettings(Base):
     notifications_enabled: Mapped[bool] = mapped_column(default=True)
 
     user: Mapped["User"] = relationship(back_populates="settings")
+
+
+# Ban por IP: o IP não pode criar conta nem fazer login (mas pode usar o site anônimo).
+class IpBan(Base):
+    __tablename__ = "ip_bans"
+
+    id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=uuid.uuid4)
+    ip: Mapped[str] = mapped_column(String(64), unique=True, index=True, nullable=False)
+    reason: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
+    banned_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())

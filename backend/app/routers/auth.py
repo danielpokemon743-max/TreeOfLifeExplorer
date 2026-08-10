@@ -6,7 +6,7 @@ from sqlalchemy import select, func as sa_func
 from pydantic import BaseModel
 
 from app.database import get_db
-from app.models import User, Passkey, Discovery, Favorite, Achievement
+from app.models import User, Passkey, Discovery, Favorite, Achievement, IpBan
 from app.config import settings
 from app.security import (
     create_access_token,
@@ -18,10 +18,26 @@ from app.security import (
 
 router = APIRouter(prefix="/api/auth", tags=["Auth"])
 
+def client_ip(request: Request) -> str:
+    """IP real do cliente, respeitando X-Forwarded-For (proxy do Render)."""
+    fwd = request.headers.get("x-forwarded-for", "")
+    if fwd:
+        return fwd.split(",")[0].strip()
+    return request.client.host if request.client else "unknown"
+
+async def is_ip_banned(ip: str, db: AsyncSession) -> bool:
+    if not ip or ip == "unknown":
+        return False
+    return await db.scalar(select(IpBan).where(IpBan.ip == ip)) is not None
+
+def is_admin_user(user) -> bool:
+    return bool(user) and (user.display_name in settings.admin_nicks)
+
 class RegisterStartRequest(BaseModel):
     display_name: str
     password: str
     device_name: str
+    country: str = ""
 
 class RegisterFinishRequest(BaseModel):
     session_id: str
@@ -72,11 +88,18 @@ async def register_start(body: RegisterStartRequest, request: Request, db: Async
     if not body.password:
         raise HTTPException(status_code=400, detail="Você precisa definir uma senha.")
 
+    # IP banido não pode criar conta (mas pode usar o site sem logar)
+    ip = client_ip(request)
+    if await is_ip_banned(ip, db):
+        raise HTTPException(status_code=403, detail="Este endereço IP está banido do cadastro e login.")
+
     session_id = f"sessao_{uuid.uuid4().hex[:12]}"
     _pending_register[session_id] = {
         "display_name": nick,
         "password_hash": hash_password(body.password),
         "device_name": body.device_name or "Navegador Web",
+        "country": (body.country or "").strip()[:100],
+        "ip": ip,
     }
 
     return {
@@ -111,7 +134,9 @@ async def register_finish(body: RegisterFinishRequest, db: AsyncSession = Depend
     user = User(
         display_name=nick,
         password_hash=pending["password_hash"],
-        last_login=datetime.now(timezone.utc)
+        last_login=datetime.now(timezone.utc),
+        country=pending.get("country") or None,
+        last_ip=pending.get("ip") or None,
     )
     db.add(user)
     await db.flush()
@@ -141,6 +166,14 @@ async def login_start(body: LoginStartRequest, request: Request, db: AsyncSessio
     if not user or not user.password_hash or not verify_password(body.password, user.password_hash):
         raise HTTPException(status_code=401, detail="Nick ou senha incorretos.")
 
+    # IP banido não pode logar; conta banida também não
+    ip = client_ip(request)
+    if await is_ip_banned(ip, db):
+        raise HTTPException(status_code=403, detail="Este endereço IP está banido do cadastro e login.")
+    if user.is_banned:
+        raise HTTPException(status_code=403, detail="Esta conta foi banida pela administração.")
+
+    user.last_ip = ip
     session_id = f"sessao_{uuid.uuid4().hex[:12]}"
     _pending_login[session_id] = {"user_id": user.id}
 
@@ -223,7 +256,10 @@ async def get_me(current_user_id: uuid.UUID = Depends(get_current_user_id), db: 
         "discoveries_count": disc_count or 0,
         "favorites_count": fav_count or 0,
         "achievements_count": ach_count or 0,
-        "passkeys": passkeys_list
+        "passkeys": passkeys_list,
+        "country": user.country,
+        "is_admin": is_admin_user(user),
+        "is_banned": bool(user.is_banned),
     }
 
 @router.post("/logout")
