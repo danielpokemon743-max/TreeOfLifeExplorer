@@ -462,16 +462,16 @@ export async function fetchMyIp() {
  */
 export async function fetchAdminUsers() {
   const token = getAuthToken();
-  if (!token) return { users: [] };
+  if (!token) return { users: [], _ok: true };
   try {
     const res = await fetchWithTimeout(`${ADMIN_BASE}/users`, {
       headers: { 'Authorization': `Bearer ${token}` },
       cache: 'no-store'
     });
-    if (!res.ok) return { users: [] };
-    return await res.json();
+    if (!res.ok) return { users: [], _ok: false };
+    return { ...(await res.json()), _ok: true };
   } catch {
-    return { users: [] };
+    return { users: [], _ok: false };
   }
 }
 
@@ -531,16 +531,16 @@ export async function adminBanIp(ip, reason = '') {
 
 export async function fetchAdminIpBans() {
   const token = getAuthToken();
-  if (!token) return { ip_bans: [] };
+  if (!token) return { ip_bans: [], _ok: true };
   try {
     const res = await fetchWithTimeout(`${ADMIN_BASE}/ip-bans`, {
       headers: { 'Authorization': `Bearer ${token}` },
       cache: 'no-store'
     });
-    if (!res.ok) return { ip_bans: [] };
-    return await res.json();
+    if (!res.ok) return { ip_bans: [], _ok: false };
+    return { ...(await res.json()), _ok: true };
   } catch {
-    return { ip_bans: [] };
+    return { ip_bans: [], _ok: false };
   }
 }
 
