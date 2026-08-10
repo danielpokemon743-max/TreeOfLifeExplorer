@@ -598,10 +598,13 @@ let dX = 0, dY = 0;
           e.touches[1].clientY - e.touches[0].clientY
         );
         this._moved = true;
-        const newScale = Math.max(0.05, Math.min(20, pinchStart * (dist / pinchDist)));
-        this.world.scale.set(newScale);
-        this.scale = newScale;
-        this._requestRender();
+        // 🔴 FIX: zoom centralizado NO ponto médio entre os dedos.
+        // Antes só mudava o scale e a árvore sumia da tela ao dar zoom out
+        // (o mundo girava em torno da origem, não do ponto de pinça).
+        const midX = (e.touches[0].clientX + e.touches[1].clientX) / 2;
+        const midY = (e.touches[0].clientY + e.touches[1].clientY) / 2;
+        this._zoomAtPoint(midX, midY, dist / pinchDist);
+        pinchDist = dist;
       }
       if (e.touches.length > 0) e.preventDefault();
     }, { passive: false });

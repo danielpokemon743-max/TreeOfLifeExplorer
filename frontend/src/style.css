@@ -248,7 +248,7 @@ body {
 /* X de fechar do painel de táxon: fixo e sempre visível, mesmo com scroll */
 .info-panel .close-btn {
   position: sticky;
-  top: 0;
+  top: 12px;
   z-index: 2;
   align-self: flex-end;
   margin-right: -0.4rem;
@@ -773,6 +773,12 @@ body {
 .modal-content > * {
   flex-shrink: 0;
 }
+/* Dentro de um modal, as listas internas não criam scroll duplo:
+   o próprio modal rola com o X fixo no topo */
+.modal-content .favs-list,
+.modal-content .backgrounds-grid {
+  max-height: none;
+}
 
 .modal-content h2 {
   margin-top: 0;
@@ -805,17 +811,17 @@ body {
 
 .modal-content .close-btn {
   position: sticky;
-  top: 0;
+  top: 12px;
   align-self: flex-end;
   order: -1;
-  margin-top: -8px;
-  margin-bottom: 4px;
+  margin-top: 0;
+  margin-bottom: 8px;
   background: rgba(30, 41, 59, 0.85);
   color: #f8fafc;
   border: 1px solid #334155;
   border-radius: 50%;
-  width: 30px;
-  height: 30px;
+  width: 34px;
+  height: 34px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1026,7 +1032,8 @@ html { --lx: 50%; --ly: 35%; --lc: 0.5; --lr: 255; --lg: 255; --lb: 255; }
   .controls { width: 100%; justify-content: center; flex-wrap: wrap; }
   .ctrl-btn { width: 40px; height: 40px; font-size: 1.1rem; }
 
-  /* Painéis laterais viram overlays de largura quase cheia */
+  /* Painéis laterais viram overlays fullscreen ACIMA da barra superior
+     (dá para usar o X de fechar sem o top-bar tapar). */
   .info-panel, .stats-panel {
     width: 100vw;
     max-width: none;
@@ -1035,6 +1042,8 @@ html { --lx: 50%; --ly: 35%; --lc: 0.5; --lr: 255; --lg: 255; --lb: 255; }
     height: 100dvh !important;
     max-height: 100vh;
     max-height: 100dvh;
+    z-index: 150;
+    padding-top: calc(0.8rem + env(safe-area-inset-top));
   }
   .info-panel { right: 0; }
   .stats-panel { left: 0; }
@@ -1069,12 +1078,17 @@ html { --lx: 50%; --ly: 35%; --lc: 0.5; --lr: 255; --lg: 255; --lb: 255; }
     font-size: 16px !important; /* evita zoom automático no iOS */
   }
 
-  /* X do painel de táxon: maior e fácil de tocar no mobile */
+  /* X do painel de táxon: maior, fácil de tocar, sempre no topo abaixo da safe-area */
   .info-panel .close-btn {
     width: 40px; height: 40px;
     font-size: 1.3rem;
-    margin-top: -8px;
+    margin-top: 0;
     margin-right: 0;
+    top: calc(env(safe-area-inset-top, 0px) + 4px);
+    position: sticky;
+  }
+  .stats-panel .stats-header {
+    top: calc(env(safe-area-inset-top, 0px) + 4px);
   }
 
   /* Barra minimizada no mobile: volta a ser linha, só com o botão */
