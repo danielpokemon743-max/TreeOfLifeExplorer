@@ -2826,6 +2826,18 @@ function showLevelUpToast(level) {
   }, 4500);
 }
  
+if (authModal) {
+  authModal.addEventListener('click', (e) => {
+    if (e.target === authModal) authModal.classList.add('hidden');
+  });
+}
+
+if (helpModal) {
+  helpModal.addEventListener('click', (e) => {
+    if (e.target === helpModal) helpModal.classList.add('hidden');
+  });
+}
+
 if (btnAuth) {
   btnAuth.addEventListener('click', async () => {
     sounds.playSFX('click');
