@@ -3,9 +3,19 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
+from starlette.middleware.base import BaseHTTPMiddleware
 from app.database import init_db
 from app.config import settings
 from app.routers import auth, progress, admin, ranking
+
+# Evita que navegadores guardem index.html em cache (asset antigo viraria 404 após deploy)
+class NoCacheHtmlMiddleware(BaseHTTPMiddleware):
+    async def dispatch(self, request, call_next):
+        response = await call_next(request)
+        path = request.url.path
+        if path == "/" or path.endswith(".html"):
+            response.headers["Cache-Control"] = "no-store, no-cache, must-revalidate, max-age=0"
+        return response
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):

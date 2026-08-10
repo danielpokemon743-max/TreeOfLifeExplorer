@@ -407,11 +407,22 @@ export async function devLevelUp(levels = 10) {
  */
 export async function fetchRanking(sort = 'xp') {
   try {
-    const res = await fetch(`${RANKING_BASE}?sort=${encodeURIComponent(sort)}`);
+    const res = await fetchWithTimeout(`${RANKING_BASE}?sort=${encodeURIComponent(sort)}`, { cache: 'no-store' });
     if (!res.ok) return { ranking: [], sort, total: 0 };
     return await res.json();
   } catch {
     return { ranking: [], sort, total: 0 };
+  }
+}
+
+// fetch com timeout (45s) — evita "Carregando…" eterno quando o servidor demora
+async function fetchWithTimeout(url, opts = {}, ms = 45000) {
+  const ctrl = new AbortController();
+  const t = setTimeout(() => ctrl.abort(), ms);
+  try {
+    return await fetch(url, { ...opts, signal: ctrl.signal });
+  } finally {
+    clearTimeout(t);
   }
 }
 
@@ -422,9 +433,7 @@ export async function fetchAdminCheck() {
   const token = getAuthToken();
   if (!token) return { is_admin: false };
   try {
-    const res = await fetch(`${ADMIN_BASE}/check`, {
-      headers: { 'Authorization': `Bearer ${token}` }
-    });
+    const res = await fetchWithTimeout(`${ADMIN_BASE}/check`, { headers: { 'Authorization': `Bearer ${token}` }, cache: 'no-store' });
     if (!res.ok) return { is_admin: false };
     return await res.json();
   } catch {
@@ -439,9 +448,7 @@ export async function fetchMyIp() {
   const token = getAuthToken();
   if (!token) return { ip: '' };
   try {
-    const res = await fetch(`${ADMIN_BASE}/my-ip`, {
-      headers: { 'Authorization': `Bearer ${token}` }
-    });
+    const res = await fetchWithTimeout(`${ADMIN_BASE}/my-ip`, { headers: { 'Authorization': `Bearer ${token}` }, cache: 'no-store' });
     if (!res.ok) return { ip: '' };
     const data = await res.json();
     return { ip: data.ip || '' };
@@ -457,8 +464,9 @@ export async function fetchAdminUsers() {
   const token = getAuthToken();
   if (!token) return { users: [] };
   try {
-    const res = await fetch(`${ADMIN_BASE}/users`, {
-      headers: { 'Authorization': `Bearer ${token}` }
+    const res = await fetchWithTimeout(`${ADMIN_BASE}/users`, {
+      headers: { 'Authorization': `Bearer ${token}` },
+      cache: 'no-store'
     });
     if (!res.ok) return { users: [] };
     return await res.json();
@@ -474,7 +482,7 @@ export async function adminBanAccount(userId) {
   const token = getAuthToken();
   if (!token) return { ok: false };
   try {
-    const res = await fetch(`${ADMIN_BASE}/ban`, {
+    const res = await fetchWithTimeout(`${ADMIN_BASE}/ban`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
       body: JSON.stringify({ user_id: userId })
@@ -490,7 +498,7 @@ export async function adminUnbanAccount(userId) {
   const token = getAuthToken();
   if (!token) return { ok: false };
   try {
-    const res = await fetch(`${ADMIN_BASE}/unban`, {
+    const res = await fetchWithTimeout(`${ADMIN_BASE}/unban`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
       body: JSON.stringify({ user_id: userId })
@@ -509,7 +517,7 @@ export async function adminBanIp(ip, reason = '') {
   const token = getAuthToken();
   if (!token) return { ok: false };
   try {
-    const res = await fetch(`${ADMIN_BASE}/ip-bans`, {
+    const res = await fetchWithTimeout(`${ADMIN_BASE}/ip-bans`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
       body: JSON.stringify({ ip, reason })
@@ -525,8 +533,9 @@ export async function fetchAdminIpBans() {
   const token = getAuthToken();
   if (!token) return { ip_bans: [] };
   try {
-    const res = await fetch(`${ADMIN_BASE}/ip-bans`, {
-      headers: { 'Authorization': `Bearer ${token}` }
+    const res = await fetchWithTimeout(`${ADMIN_BASE}/ip-bans`, {
+      headers: { 'Authorization': `Bearer ${token}` },
+      cache: 'no-store'
     });
     if (!res.ok) return { ip_bans: [] };
     return await res.json();
@@ -539,7 +548,7 @@ export async function adminUnbanIp(ip) {
   const token = getAuthToken();
   if (!token) return { ok: false };
   try {
-    const res = await fetch(`${ADMIN_BASE}/ip-bans/unban`, {
+    const res = await fetchWithTimeout(`${ADMIN_BASE}/ip-bans/unban`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
       body: JSON.stringify({ ip })

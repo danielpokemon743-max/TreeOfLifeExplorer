@@ -3407,7 +3407,13 @@ async function openRankingPage(sort = _currentSort) {
 
   if (rankingList) rankingList.innerHTML = '<p style="color: #94a3b8; text-align: center; padding: 20px;">Carregando…</p>';
 
-  const { ranking } = await fetchRanking(_currentSort);
+  let ranking = [];
+  try {
+    const data = await fetchRanking(_currentSort);
+    ranking = data.ranking || [];
+  } catch (e) {
+    ranking = [];
+  }
   if (!rankingList) return;
 
   rankingList.innerHTML = '';
