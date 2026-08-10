@@ -2964,6 +2964,33 @@ if (btnSources && statsPanel) btnSources.addEventListener('click', () => statsPa
 if (btnHelp && helpModal) btnHelp.addEventListener('click', () => helpModal.classList.remove('hidden'));
 if (closeHelpBtn && helpModal) closeHelpBtn.addEventListener('click', () => helpModal.classList.add('hidden'));
 
+// ─── BARRA SUPERIOR MINIMIZÁVEL ────────────────────────────────────────────
+const topBar = document.querySelector('.top-bar');
+const btnCollapse = document.getElementById('btn-collapse-bar');
+function setBarCollapsed(collapsed) {
+  if (!topBar) return;
+  topBar.classList.toggle('collapsed', collapsed);
+  const btn = document.getElementById('btn-collapse-bar');
+  if (btn) btn.title = collapsed ? 'Expandir barra' : 'Minimizar barra';
+  localStorage.setItem('tol_bar_collapsed', collapsed ? '1' : '0');
+}
+if (btnCollapse) {
+  btnCollapse.addEventListener('click', () => {
+    if (topBar) setBarCollapsed(!topBar.classList.contains('collapsed'));
+  });
+  btnCollapse.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      if (topBar) setBarCollapsed(!topBar.classList.contains('collapsed'));
+    }
+  });
+  // Restaura estado salvo (default: colapsada no mobile, expandida no desktop)
+  const saved = localStorage.getItem('tol_bar_collapsed');
+  const mobileByDefault = window.matchMedia('(max-width: 640px)').matches;
+  if (saved !== null) setBarCollapsed(saved === '1');
+  else if (mobileByDefault) setBarCollapsed(true);
+}
+
 const btnValidateLineage = document.getElementById('btn-validate-lineage');
 const btnTestValidator = document.getElementById('btn-test-validator');
 if (btnValidateLineage) btnValidateLineage.addEventListener('click', () => {

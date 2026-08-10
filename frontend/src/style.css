@@ -12,6 +12,10 @@
 
 * { box-sizing: border-box; margin: 0; padding: 0; }
 
+html {
+  background: #07070f;
+}
+
 body {
   background: var(--bg);
   color: var(--text);
@@ -23,7 +27,6 @@ body {
   -webkit-tap-highlight-color: transparent;
   -webkit-touch-callout: none;
   overscroll-behavior: none;
-  position: fixed;
 }
 
 
@@ -111,7 +114,49 @@ body {
   border-top: none;
   border-left: none;
   border-right: none;
+  transition: transform var(--transition), opacity var(--transition);
 }
+
+.collapse-btn {
+  width: 26px; height: 26px;
+  border-radius: 6px;
+  border: 1px solid var(--glass-border);
+  background: rgba(0,0,0,0.3);
+  color: var(--text);
+  font-size: 0.85rem;
+  line-height: 1;
+  cursor: pointer;
+  transition: var(--transition);
+  flex-shrink: 0;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+.collapse-btn:hover {
+  background: var(--purple);
+  border-color: var(--purple);
+}
+
+/* Estado minimizado: esconde logo, busca e controles (fica só o botão) */
+.top-bar.collapsed {
+  gap: 0;
+  padding: 0.35rem 0.6rem;
+  width: auto;
+  border-radius: 0 0 12px 0;
+  border-bottom: 1px solid var(--glass-border);
+  border-right: 1px solid var(--glass-border);
+}
+.top-bar.collapsed .logo,
+.top-bar.collapsed .search-wrap,
+.top-bar.collapsed .controls {
+  display: none;
+}
+.top-bar.collapsed .collapse-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px; height: 30px;
+}
+.top-bar.collapsed .collapse-btn { transform: rotate(180deg); }
 
 .logo {
   font-family: 'Outfit', sans-serif;
@@ -974,5 +1019,12 @@ html { --lx: 50%; --ly: 35%; --lc: 0.5; --lr: 255; --lg: 255; --lb: 255; }
   .action-btn { min-height: 36px; padding: 8px 12px; }
   select, input[type="text"], input[type="password"], input[type="search"] {
     font-size: 16px !important; /* evita zoom automático no iOS */
+  }
+
+  /* Barra minimizada no mobile: volta a ser linha, só com o botão */
+  .top-bar.collapsed {
+    flex-direction: row !important;
+    width: auto;
+    padding: 0.35rem 0.5rem !important;
   }
 }
