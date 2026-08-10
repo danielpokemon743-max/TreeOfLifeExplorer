@@ -24,6 +24,7 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(lifespan=lifespan, title="Tree of Life Explorer API")
 
+app.add_middleware(NoCacheHtmlMiddleware)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[settings.expected_origin],
