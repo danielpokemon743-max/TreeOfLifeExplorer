@@ -24,19 +24,42 @@ def verify_password(password: str, password_hash: str) -> bool:
     except ValueError:
         return False
 
-# Palavras bloqueadas em nomes inapropriados (comparadas de forma normalizada)
-BANNED_WORDS = [
+# Palavras bloqueadas em nomes inapropriados (comparadas de forma normalizada:
+# sem acentos e tudo minúsculo).
+
+# Termos fortes/inequívocos: bloqueiam por SUBSTRING (pegam "xputax", "putaria",
+# "estuprador", variações compostas etc.).
+BANNED_WORDS_SUBSTRING = [
     # Português
     "puta", "puto", "porra", "caralho", "foda", "foder", "merda", "bosta",
-    "cagar", "cacete", "pau", "piroca", "buceta", "xota", "cu", "rola",
-    "filhodaputa", "filhodaputa", "arrombado", "viado", "bixa", "pederasta",
-    "escroto", "idiota", "burro", "macaco", "negrada", "preta", "crioulo",
-    "nazista", "hitler", "ku klux", "kllux",
+    "cagar", "cacete", "piroca", "buceta", "xota", "arrombado", "arrombada",
+    "viado", "bixa", "pederasta", "escroto", "idiota", "macaco", "negrada",
+    "crioulo", "nazista", "hitler", "nazi",
+    # Composições
+    "filhodaputa", "filha da puta", "fdp", "ku klux", "kllux", "kkk",
+    "vai tomar no cu", "vtnc", "ptnc", "pqp", "tnc", "sequestr", "trafica",
+    "genocida", "pedofil", "estuprad", "suicid",
     # Inglês (comuns em usernames)
     "fuck", "fucking", "shit", "bitch", "dick", "cock", "pussy", "asshole",
-    "nigger", "faggot", "retard", "rape", "rapist", "kill", "murder",
-    "hitler", "nazi", "sex", "sexual",
+    "nigger", "faggot", "retard", "rape", "rapist", "murder",
 ]
+
+# Palavras curtas/ambíguas: só bloqueiam como palavra INTEIRA, para não barrar
+# nomes legítimos como "paulo", "cubo", "sexy".
+BANNED_WORDS_BOUNDARY = [
+    "pau", "cu", "rola", "sex", "sexual", "kill",
+]
+
+MAX_NICK_LENGTH = 20
+
+def _blocked_token_regex() -> object:
+    """Compila a regex de borda de palavra uma única vez (cache)."""
+    import re
+    if not hasattr(_blocked_token_regex, "_cache"):
+        _blocked_token_regex._cache = re.compile(
+            r"(?:^|[^a-z0-9])(" + "|".join(re.escape(w) for w in BANNED_WORDS_BOUNDARY) + r")(?:$|[^a-z0-9])"
+        )
+    return _blocked_token_regex._cache
 
 def _normalize(text: str) -> str:
     """Remove acentos e coloca tudo em minúsculas para comparação."""
@@ -47,10 +70,14 @@ def _normalize(text: str) -> str:
 def nickname_is_inappropriate(nick: str) -> bool:
     """Retorna True se o nick contém termos impróprios."""
     normalized = _normalize(nick or "")
-    for word in BANNED_WORDS:
-        # evita bloqueio de palavras curtas/parciais (ex.: "pau" dentro de "paulo")
-        if word in normalized:
-            return True
+    if not normalized:
+        return False
+    # 1) Termos fortes por substring (pega "xputax", "putaria" etc.)
+    if any(w in normalized for w in BANNED_WORDS_SUBSTRING):
+        return True
+    # 2) Palavras curtas/ambíguas apenas como palavra inteira
+    if _blocked_token_regex().search(normalized):
+        return True
     return False
 
 def create_access_token(user_id: uuid.UUID) -> str:

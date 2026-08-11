@@ -3,7 +3,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func as sa_func
 
 from app.database import get_db
-from app.models import User, Achievement, Discovery
+from app.models import User, Achievement, Discovery, IpBan
 from app.routers.progress import level_from_xp
 
 router = APIRouter(prefix="/api/ranking", tags=["Ranking"])
@@ -39,10 +39,14 @@ async def get_ranking(
     ach_count = {r[0]: r[1] for r in ach_rows}
     disc_count = {r[0]: r[1] for r in disc_rows}
 
+    # IPs banidos (usuários cujo último IP está na blacklist somem do ranking)
+    banned_ips = (await db.execute(select(IpBan.ip))).scalars().all()
+    banned_ip_set = set(banned_ips)
+
     result = await db.execute(
         select(User).where(User.is_banned == False)  # noqa: E712
     )
-    users = result.scalars().all()
+    users = [u for u in result.scalars().all() if (u.last_ip or None) not in banned_ip_set]
 
     entries = []
     for u in users:

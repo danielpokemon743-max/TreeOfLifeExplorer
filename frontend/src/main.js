@@ -146,13 +146,29 @@ let _isAdminUser = false;
 // Palavras bloqueadas em nicks (mesma lógica do backend)
 const BANNED_NICKWORDS = [
   'puta','puto','porra','caralho','foda','foder','merda','bosta','cagar','cacete',
-  'piroca','buceta','xota','rola','filhodaputa','arrombado','viado','bixa',
-  'escroto','idiota','macaco','negrada','crioulo','nazista','hitler','ku klux',
+  'piroca','buceta','xota','arrombado','arrombada','viado','bixa','pederasta',
+  'escroto','idiota','macaco','negrada','crioulo','nazista','hitler','nazi',
+  'filhodaputa','filha da puta','fdp','ku klux','kllux','kkk','vai tomar no cu',
+  'vtnc','ptnc','pqp','tnc','sequestr','trafica','genocida','pedofil','estuprad','suicid',
   'fuck','fucking','shit','bitch','dick','cock','pussy','asshole','nigger',
-  'faggot','retard','rape','rapist','kill','murder','sex','sexual'
+  'faggot','retard','rape','rapist','murder'
 ];
+// Palavras curtas/ambíguas: só barram como palavra inteira (ex.: "pau" não barra "paulo")
+const NICK_BOUNDARY_WORDS = ['pau','cu','rola','sex','sexual','kill'];
 function _normNick(text) {
   return (text || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+}
+function escapeRegex(str) {
+  return (str || '').replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+let _nickBlockRegex = null;
+function _nickIsBlocked(nick) {
+  const norm = _normNick(nick);
+  if (!norm) return false;
+  if (!_nickBlockRegex) {
+    _nickBlockRegex = new RegExp(`(?:^|[^a-z0-9])(${NICK_BOUNDARY_WORDS.map(escapeRegex).join('|')})(?:$|[^a-z0-9])`);
+  }
+  return BANNED_NICKWORDS.some(w => norm.includes(w)) || _nickBlockRegex.test(norm);
 }
 let renderer;
 let rootNode = null;
@@ -559,6 +575,32 @@ setInterval(async () => {
     _activeSecondsAccum += seconds;
   }
 }, 30000);
+
+// Verifica banimento (conta ou IP) a cada 15s enquanto estiver logado.
+// Se o backend marcar a sessão como banida, desloga na hora e mostra o motivo.
+let _banCheckInProgress = false;
+setInterval(async () => {
+  if (!currentProfile || _banCheckInProgress) return;
+  _banCheckInProgress = true;
+  try {
+    const profile = await fetchUserProfile();
+    if (!profile) return; // token expirado → já tratado em outro ponto
+    if (profile.banned) {
+      currentProfile = null;
+      await logoutUser();
+      await updateAuthUI();
+      // Refresca o ranking se estiver aberto (removido da lista)
+      if (rankingModal && !rankingModal.classList.contains('hidden')) {
+        openRankingPage(_currentSort);
+      }
+      showAchievementNotification('', '🚫 Sessão encerrada', profile.banned_detail || 'Sua conta foi banida.');
+    }
+  } catch {
+    // rede offline — tenta de novo no próximo ciclo
+  } finally {
+    _banCheckInProgress = false;
+  }
+}, 15000);
 
 // Tenta enviar o restante ao fechar/fechar a aba
 window.addEventListener('beforeunload', () => {
@@ -2908,9 +2950,10 @@ if (btnRegisterPasskey) {
     const ipConsent = ipConsentCheck ? ipConsentCheck.checked : false;
 
     if (!dispName) return alert('Por favor, escolha um nick.');
+    if (dispName.length > 20) return alert('O apelido pode ter no máximo 20 caracteres.');
     if (!password) return alert('Defina uma senha para sua conta.');
     if (!ipConsent) return alert('Para criar uma conta é necessário autorizar o registro do seu IP (marque a caixa). Caso contrário, jogue como visitante.');
-    if (BANNED_NICKWORDS.some(w => _normNick(dispName).includes(w))) {
+    if (_nickIsBlocked(dispName)) {
       return alert('Este apelido contém termos não permitidos.');
     }
 

@@ -14,6 +14,7 @@ from app.security import (
     hash_password,
     verify_password,
     nickname_is_inappropriate,
+    MAX_NICK_LENGTH,
 )
 
 router = APIRouter(prefix="/api/auth", tags=["Auth"])
@@ -96,7 +97,12 @@ async def detect_ip(request: Request):
 async def register_start(body: RegisterStartRequest, request: Request, db: AsyncSession = Depends(get_db)):
     nick = body.display_name.strip()
 
-    # 1. Filtro de apelidos impróprios
+    # 1. Tamanho máximo do apelido
+    if len(nick) > MAX_NICK_LENGTH:
+        raise HTTPException(status_code=400, detail=f"O apelido pode ter no máximo {MAX_NICK_LENGTH} caracteres.")
+    nick = nick[:MAX_NICK_LENGTH]
+
+    # 2. Filtro de apelidos impróprios
     if nickname_is_inappropriate(nick):
         raise HTTPException(status_code=400, detail="Este apelido não é permitido.")
 
@@ -149,8 +155,8 @@ async def register_finish(body: RegisterFinishRequest, db: AsyncSession = Depend
 
     nick = pending["display_name"]
 
-    # Unicidade do nick (duas pessoas não podem ter o mesmo nome)
-    existing = await db.execute(select(User).where(User.display_name == nick))
+    # Unicidade do nick (sem diferenciar maiúsculas: "Nutellinha" == "nutellinha")
+    existing = await db.execute(select(User).where(sa_func.lower(User.display_name) == nick.lower()))
     if existing.scalar_one_or_none():
         raise HTTPException(status_code=409, detail="Este nome de usuário já está em uso.")
 
@@ -184,7 +190,8 @@ async def login_start(body: LoginStartRequest, request: Request, db: AsyncSessio
     if not nick or not body.password:
         raise HTTPException(status_code=400, detail="Informe o nick e a senha.")
 
-    result = await db.execute(select(User).where(User.display_name == nick))
+    # Login aceita variação de maiúsculas (o nick é único case-insensitive)
+    result = await db.execute(select(User).where(sa_func.lower(User.display_name) == nick.lower()))
     user = result.scalar_one_or_none()
     if not user or not user.password_hash or not verify_password(body.password, user.password_hash):
         raise HTTPException(status_code=401, detail="Nick ou senha incorretos.")
@@ -259,7 +266,7 @@ async def add_passkey_finish(body: PasskeyAddFinishRequest, db: AsyncSession = D
     return {"status": "success", "message": "Dispositivo adicionado"}
 
 @router.get("/me")
-async def get_me(current_user_id: uuid.UUID = Depends(get_current_user_id), db: AsyncSession = Depends(get_db)):
+async def get_me(request: Request, current_user_id: uuid.UUID = Depends(get_current_user_id), db: AsyncSession = Depends(get_db)):
     user = await db.get(User, current_user_id)
     if not user:
         raise HTTPException(status_code=404, detail="Usuário não encontrado")
@@ -273,6 +280,16 @@ async def get_me(current_user_id: uuid.UUID = Depends(get_current_user_id), db: 
     )
     passkeys_list = [{"device_name": p.device_name, "created_at": p.created_at.isoformat()} for p in passkeys_result.scalars().all()]
 
+    # Estado de banimento (conta OU IP atual) — usado pelo frontend para
+    # deslogar automaticamente quem foi banido.
+    ip_banned = await is_ip_banned(client_ip(request), db)
+    banned = bool(user.is_banned) or ip_banned
+    ban_detail = None
+    if user.is_banned:
+        ban_detail = "Sua conta foi banida pela administração."
+    elif ip_banned:
+        ban_detail = "Seu endereço de IP foi banido pela administração."
+
     return {
         "display_name": user.display_name,
         "last_login": user.last_login.isoformat() if user.last_login else None,
@@ -283,6 +300,9 @@ async def get_me(current_user_id: uuid.UUID = Depends(get_current_user_id), db: 
         "country": user.country,
         "is_admin": is_admin_user(user),
         "is_banned": bool(user.is_banned),
+        "ip_banned": ip_banned,
+        "banned": banned,
+        "banned_detail": ban_detail,
     }
 
 @router.post("/logout")
