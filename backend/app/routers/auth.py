@@ -76,6 +76,55 @@ class PasskeyAddFinishRequest(BaseModel):
 _pending_register = {}
 _pending_login = {}
 
+# ─── PROTEÇÃO ANTI BRUTE FORCE (em memória; servidor roda com 1 worker) ──────
+import time as _time
+from collections import defaultdict, deque
+
+# janela de tentativas por IP, cooldown após excesso de falhas
+_LOGIN_WINDOW_SECONDS = 600      # 10 minutos
+_LOGIN_MAX_ATTEMPTS = 6          # máximo de falhas por janela
+_LOGIN_BLOCK_SECONDS = 900       # bloqueado por 15 minutos
+_REGISTER_WINDOW_SECONDS = 600
+_REGISTER_MAX_ATTEMPTS = 20      # criações de conta por janela (anti-spam)
+
+# histórico: ip -> deque de (timestamp, sucesso)
+_failed_attempts: dict[str, deque] = defaultdict(deque)
+_ip_blocked_until: dict[str, float] = {}
+_register_counts: dict[str, deque] = defaultdict(deque)
+
+def _prune_window(history: deque, window: int) -> None:
+    cutoff = _time.time() - window
+    while history and history[0] < cutoff:
+        history.popleft()
+
+def _ip_is_blocked(ip: str) -> bool:
+    blocked_until = _ip_blocked_until.get(ip, 0)
+    if blocked_until > _time.time():
+        return True
+    if blocked_until:
+        _ip_blocked_until.pop(ip, None)
+    return False
+
+def _record_failed_login(ip: str) -> None:
+    now = _time.time()
+    _failed_attempts[ip].append(now)
+    _prune_window(_failed_attempts[ip], _LOGIN_WINDOW_SECONDS)
+    if len(_failed_attempts[ip]) >= _LOGIN_MAX_ATTEMPTS:
+        _ip_blocked_until[ip] = now + _LOGIN_BLOCK_SECONDS
+        _failed_attempts[ip].clear()
+
+def _check_login_allowed(ip: str) -> float:
+    """Retorna segundos restantes de bloqueio (0 = permite)."""
+    if _ip_is_blocked(ip):
+        return max(1, int(_ip_blocked_until.get(ip, 0) - _time.time()))
+    return 0
+
+def _record_register_attempt(ip: str) -> bool:
+    now = _time.time()
+    _register_counts[ip].append(now)
+    _prune_window(_register_counts[ip], _REGISTER_WINDOW_SECONDS)
+    return len(_register_counts[ip]) <= _REGISTER_MAX_ATTEMPTS
+
 def _rp_id(request: Request) -> str:
     """RP ID WebAuthn = domínio que o navegador REALMENTE está usando (sem porta).
 
@@ -98,6 +147,11 @@ async def detect_ip(request: Request):
 @router.post("/register/start")
 async def register_start(body: RegisterStartRequest, request: Request, db: AsyncSession = Depends(get_db)):
     nick = body.display_name.strip()
+    ip = client_ip(request)
+
+    # Anti spam: limites de tentativas por IP também no cadastro
+    if not _record_register_attempt(ip):
+        raise HTTPException(status_code=429, detail="Muitas tentativas de cadastro. Aguarde alguns minutos.")
 
     # 1. Tamanho máximo do apelido
     if len(nick) > MAX_NICK_LENGTH:
@@ -120,7 +174,6 @@ async def register_start(body: RegisterStartRequest, request: Request, db: Async
         )
 
     # IP banido não pode criar conta (mas pode usar o site sem logar)
-    ip = client_ip(request)
     if await is_ip_banned(ip, db):
         raise HTTPException(status_code=403, detail="Este endereço IP está banido do cadastro e login.")
 
@@ -192,14 +245,23 @@ async def login_start(body: LoginStartRequest, request: Request, db: AsyncSessio
     if not nick or not body.password:
         raise HTTPException(status_code=400, detail="Informe o nick e a senha.")
 
-    # Login aceita variação de maiúsculas (o nick é único case-insensitive)
+    ip = client_ip(request)
+
+    # Anti brute force: IP com muitas falhas recentes é bloqueado temporariamente
+    remaining = _check_login_allowed(ip)
+    if remaining:
+        raise HTTPException(
+            status_code=429,
+            detail=f"Muitas tentativas de login. Tente novamente em {remaining} segundos.",
+        )
+
     result = await db.execute(select(User).where(sa_func.lower(User.display_name) == nick.lower()))
     user = result.scalar_one_or_none()
     if not user or not user.password_hash or not verify_password(body.password, user.password_hash):
+        _record_failed_login(ip)
         raise HTTPException(status_code=401, detail="Nick ou senha incorretos.")
 
     # IP banido não pode logar; conta banida também não
-    ip = client_ip(request)
     if await is_ip_banned(ip, db):
         raise HTTPException(status_code=403, detail="Este endereço IP está banido do cadastro e login.")
     if user.is_banned:
