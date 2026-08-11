@@ -31,7 +31,10 @@ async def is_ip_banned(ip: str, db: AsyncSession) -> bool:
     return await db.scalar(select(IpBan).where(IpBan.ip == ip)) is not None
 
 def is_admin_user(user) -> bool:
-    return bool(user) and (user.display_name in settings.admin_nicks)
+    """É admin se marcado no banco OU listado em ADMIN_NICKS (env)."""
+    if not user:
+        return False
+    return bool(user.is_admin) or user.display_name in settings.admin_nicks
 
 class RegisterStartRequest(BaseModel):
     display_name: str

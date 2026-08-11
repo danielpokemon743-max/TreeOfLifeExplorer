@@ -26,6 +26,9 @@ class User(Base):
     last_ip: Mapped[Optional[str]] = mapped_column(String(64), nullable=True)
     # Conta banida por um admin (banned): bloqueia login e ações logadas
     is_banned: Mapped[bool] = mapped_column(default=False, nullable=False)
+    # Marcação direta de admin no banco (além da env ADMIN_NICKS). Permite
+    # promover um usuário a administrador sem depender de variável de ambiente.
+    is_admin: Mapped[bool] = mapped_column(default=False, nullable=False)
 
     # Relacionamento de Autenticação (Múltiplas Passkeys por usuário)
     passkeys: Mapped[List["Passkey"]] = relationship(back_populates="user", cascade="all, delete-orphan")
