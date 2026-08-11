@@ -30,13 +30,27 @@ async function safeJson(res) {
 }
 
 /**
+ * 0. Detecta o IP que o servidor vê (mostrado no cadastro para consentimento)
+ */
+export async function detectMyIp() {
+  try {
+    const res = await fetchWithTimeout(`${API_BASE}/detect-ip`, { cache: 'no-store' });
+    if (!res.ok) return '';
+    const data = await res.json();
+    return data.ip || '';
+  } catch {
+    return '';
+  }
+}
+
+/**
  * 1. Registro de Usuário (nick + senha) + Passkey
  */
-export async function registerPasskey(displayName, password, deviceName, country = '') {
+export async function registerPasskey(displayName, password, deviceName, country = '', ipConsent = true) {
   const startRes = await fetch(`${API_BASE}/register/start`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ display_name: displayName, password, device_name: deviceName, country })
+    body: JSON.stringify({ display_name: displayName, password, device_name: deviceName, country, ip_consent: ipConsent })
   });
 
   if (!startRes.ok) {

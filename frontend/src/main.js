@@ -25,6 +25,7 @@ import {
   adminBanIp,
   fetchAdminIpBans,
   adminUnbanIp,
+  detectMyIp,
   COUNTRIES,
   ACHIEVEMENT_NAMES,
   ACHIEVEMENT_DESCRIPTIONS
@@ -135,6 +136,9 @@ const adminBanIpInput    = document.getElementById('admin-ban-ip');
 const adminBanIpReason   = document.getElementById('admin-ban-ip-reason');
 const adminMsg           = document.getElementById('admin-msg');
 const authCountrySelect  = document.getElementById('auth-country');
+const ipConsentCheck     = document.getElementById('auth-ip-consent');
+const ipConsentBox       = document.getElementById('auth-ip-consent-box');
+const detectedIpLabel    = document.getElementById('auth-detected-ip');
 let _currentSort = 'xp';
 let _isAdminUser = false;
  
@@ -2876,6 +2880,12 @@ if (btnAuth) {
     sounds.playSFX('click');
     await updateAuthUI();
     if (authModal) authModal.classList.remove('hidden');
+    // Mostra o IP que será registrado (apenas se o modal novo de cadastro existe)
+    if (detectedIpLabel && detectedIpLabel.textContent === '—') {
+      detectMyIp().then(ip => {
+        if (detectedIpLabel && ip) detectedIpLabel.textContent = ip;
+      });
+    }
   });
 }
  
@@ -2895,15 +2905,17 @@ if (btnRegisterPasskey) {
     const password = passEl ? passEl.value : '';
     const devName = (devNameEl && devNameEl.value.trim()) || 'Navegador Web';
     const country = authCountrySelect ? authCountrySelect.value : '';
+    const ipConsent = ipConsentCheck ? ipConsentCheck.checked : false;
 
     if (!dispName) return alert('Por favor, escolha um nick.');
     if (!password) return alert('Defina uma senha para sua conta.');
+    if (!ipConsent) return alert('Para criar uma conta é necessário autorizar o registro do seu IP (marque a caixa). Caso contrário, jogue como visitante.');
     if (BANNED_NICKWORDS.some(w => _normNick(dispName).includes(w))) {
       return alert('Este apelido contém termos não permitidos.');
     }
 
     try {
-      await registerPasskey(dispName, password, devName, country);
+      await registerPasskey(dispName, password, devName, country, ipConsent);
       sounds.playSFX('success');
       alert('Conta criada com sucesso!');
       await updateAuthUI();

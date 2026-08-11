@@ -48,7 +48,7 @@
       <button class="ctrl-btn" id="btn-sources" title="Fontes de dados">📊</button>
       <button class="ctrl-btn" id="btn-help" title="Sobre o Projeto">❓</button>
     </div>
-    <div id="tol-version" title="Versão do site">v5-ban-refactor</div>
+    <div id="tol-version" title="Versão do site">v6-ip-consent</div>
   </header>
 
   <!-- Painel de Informação do Táxon (direita) -->
@@ -247,6 +247,24 @@
           <select id="auth-country" style="width:100%; padding:8px; margin-top:4px; border-radius:4px; background:#121214; border:1px solid #333; color:white;">
             <option value="">— Selecione seu país —</option>
           </select>
+        </div>
+
+        <!-- Consentimento de IP: sem autorização, não é possível criar conta -->
+        <div id="auth-ip-consent-box" style="margin-bottom:16px; padding:10px; background:rgba(52,152,219,0.08); border:1px solid rgba(52,152,219,0.3); border-radius:8px;">
+          <label style="font-size:13px; color:#fff; display:flex; align-items:flex-start; gap:8px; cursor:pointer;">
+            <input type="checkbox" id="auth-ip-consent" style="margin-top:2px; transform:scale(1.15);">
+            <span>
+              <strong>Permito que o site registre meu endereço IP</strong>
+              <span style="display:block; font-size:12px; color:#bbb; margin-top:2px;">
+                Seu IP detectado: <code id="auth-detected-ip" style="color:#2ecc71;">—</code>
+              </span>
+            </span>
+          </label>
+          <p style="font-size:11px; color:#999; margin:8px 0 0; line-height:1.5;">
+            O IP é usado apenas para proteção da comunidade (evitar contas duplicadas) e
+            para banimentos abusivos pela administração.
+            <strong style="color:#e74c3c;">Sem esta autorização você não pode criar conta — mas pode explorar a árvore da vida como visitante.</strong>
+          </p>
         </div>
 
         <button id="btn-register-passkey" style="width:100%; padding:10px; background:#2ecc71; border:none; border-radius:4px; color:white; font-weight:bold; cursor:pointer; margin-bottom:10px;">

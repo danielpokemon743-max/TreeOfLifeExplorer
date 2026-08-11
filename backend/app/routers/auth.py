@@ -41,6 +41,9 @@ class RegisterStartRequest(BaseModel):
     password: str
     device_name: str
     country: str = ""
+    # Consentimento para registrar o IP do usuário no cadastro.
+    # Sem ele, a conta não pode ser criada (usuário pode jogar como visitante).
+    ip_consent: bool = False
 
 class RegisterFinishRequest(BaseModel):
     session_id: str
@@ -80,6 +83,15 @@ def _rp_id(request: Request) -> str:
     host = host.split(":")[0]  # remove porta
     return host or settings.rp_id
 
+@router.get("/detect-ip")
+async def detect_ip(request: Request):
+    """Público: retorna o IP que será registrado caso o usuário concorde.
+
+    Usado na tela de cadastro para mostrar ao visitante o IP que será
+    armazenado antes de pedir o consentimento.
+    """
+    return {"ip": client_ip(request)}
+
 @router.post("/register/start")
 async def register_start(body: RegisterStartRequest, request: Request, db: AsyncSession = Depends(get_db)):
     nick = body.display_name.strip()
@@ -90,6 +102,14 @@ async def register_start(body: RegisterStartRequest, request: Request, db: Async
 
     if not body.password:
         raise HTTPException(status_code=400, detail="Você precisa definir uma senha.")
+
+    # Consentimento explícito para capturar e armazenar o IP do usuário.
+    # Se negado, não é possível criar conta (apenas jogar sem conta).
+    if not body.ip_consent:
+        raise HTTPException(
+            status_code=403,
+            detail="Para criar uma conta você precisa autorizar o registro do seu endereço IP. Sem isso, você pode usar o site como visitante.",
+        )
 
     # IP banido não pode criar conta (mas pode usar o site sem logar)
     ip = client_ip(request)
