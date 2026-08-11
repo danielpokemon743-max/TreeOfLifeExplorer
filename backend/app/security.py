@@ -37,8 +37,9 @@ BANNED_WORDS_SUBSTRING = [
     "crioulo", "nazista", "hitler", "nazi", "20comer70correr", "carai", "tung", "sahur",
     # Composições
     "filhodaputa", "filha da puta", "fdp", "ku klux", "kllux", "kkk",
-    "vai tomar no cu", "vtnc", "ptnc", "pqp", "tnc", "sequestro", "trafica",
-    "genocida", "pedofilo", "estuprador", "suicida", "six seven",
+    "vai tomar no cu", "vtnc", "ptnc", "pqp", "tnc", "sequestr", "sequestro",
+    "trafica", "genocida", "pedofil", "pedofilo", "estuprad", "estuprador",
+    "suicid", "suicida", "six seven",
     # Inglês (comuns em usernames)
     "fuck", "fucking", "shit", "bitch", "dick", "cock", "pussy", "asshole",
     "nigger", "faggot", "retard", "rape", "rapist", "murder",

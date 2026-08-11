@@ -150,7 +150,7 @@ const BANNED_NICKWORDS = [
   'escroto','idiota','macaco','negrada','crioulo','nazista','hitler','nazi',
   '20comer70correr','carai','tung','sahur',
   'filhodaputa','filha da puta','fdp','ku klux','kllux','kkk','vai tomar no cu',
-  'vtnc','ptnc','pqp','tnc','sequestro','trafica','genocida','pedofilo','estuprador','suicida',
+  'vtnc','ptnc','pqp','tnc','sequestr','sequestro','trafica','genocida','pedofil','pedofilo','estuprad','estuprador','suicid','suicida',
   'six seven',
   'fuck','fucking','shit','bitch','dick','cock','pussy','asshole','nigger',
   'faggot','retard','rape','rapist','murder'
