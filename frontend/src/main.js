@@ -3068,7 +3068,7 @@ if (btnFavTaxon) {
 document.body.addEventListener('click', () => {
   try {
     if (sounds && typeof sounds.playPlaylist === 'function') {
-      sounds.playPlaylist(['/music/musica1.mp3', '/music/musica2.mp3', '/music/musica3.mp3', '/music/musica4.mp3']);
+      sounds.playPlaylist(['/music/musica1.mp3', '/music/musica2.mp3', '/music/musica3.mp3', '/music/musica4.mp3', '/music/musica5.mp3', '/music/musica6.mp3']);
     }
     if (sounds && typeof sounds.resumeMusic === 'function') {
       sounds.resumeMusic();
