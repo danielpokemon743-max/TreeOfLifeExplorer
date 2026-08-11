@@ -237,6 +237,16 @@
           <input type="password" id="auth-password" placeholder="Sua senha secreta" autocomplete="current-password" style="width:100%; padding:8px; margin-top:4px; border-radius:4px; background:#121214; border:1px solid #333; color:white;">
         </div>
 
+        <!-- Captcha anti-bot (obrigatório no login; protege contra brute force) -->
+        <div id="auth-captcha-box" style="margin-bottom: 16px; padding:10px; background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.12); border-radius:8px;">
+          <label style="font-size:13px; color:#fff; display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+            <span id="auth-captcha-question" style="color:#f1c40f; font-weight:bold;">…</span>
+            <button type="button" id="auth-captcha-refresh" style="background:none; border:none; color:#3498db; cursor:pointer; font-size:12px;">🔄</button>
+          </label>
+          <input type="text" id="auth-captcha-answer" placeholder="Digite o resultado" inputmode="numeric" style="width:100%; padding:8px; margin-top:6px; border-radius:4px; background:#121214; border:1px solid #333; color:white;">
+          <p style="font-size:11px; color:#999; margin:6px 0 0;">Prove que você é humano para entrar na conta.</p>
+        </div>
+
         <div style="margin-bottom: 16px;">
           <label style="font-size: 13px; color: #ccc;">Nome deste Dispositivo (novo cadastro):</label>
           <input type="text" id="auth-device-name" placeholder="Ex: Computador Pessoal" style="width:100%; padding:8px; margin-top:4px; border-radius:4px; background:#121214; border:1px solid #333; color:white;">

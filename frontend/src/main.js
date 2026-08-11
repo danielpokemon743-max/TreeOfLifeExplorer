@@ -26,6 +26,7 @@ import {
   fetchAdminIpBans,
   adminUnbanIp,
   detectMyIp,
+  fetchCaptcha,
   COUNTRIES,
   ACHIEVEMENT_NAMES,
   ACHIEVEMENT_DESCRIPTIONS
@@ -119,6 +120,27 @@ const btnRegisterPasskey = document.getElementById('btn-register-passkey');
 const btnLoginPasskey    = document.getElementById('btn-login-passkey');
 const btnAddDevice       = document.getElementById('btn-add-device');
 const btnLogout          = document.getElementById('btn-logout');
+
+// Captcha anti-bot (login)
+let _captchaId = '';
+let _captchaQuestionEl = document.getElementById('auth-captcha-question');
+let _captchaAnswerEl   = document.getElementById('auth-captcha-answer');
+let _captchaRefreshBtn = document.getElementById('auth-captcha-refresh');
+
+async function refreshCaptcha() {
+  try {
+    const data = await fetchCaptcha();
+    if (!data || !data.captcha_id) return;
+    _captchaId = data.captcha_id;
+    if (_captchaQuestionEl) _captchaQuestionEl.textContent = (data.question || 'Quanto é 1 + 1?').trim();
+    if (_captchaAnswerEl) _captchaAnswerEl.value = '';
+  } catch {
+    // sem rede: deixa o campo como está
+  }
+}
+if (_captchaRefreshBtn) {
+  _captchaRefreshBtn.addEventListener('click', refreshCaptcha);
+}
 
 // Ranking Global + Admin
 const btnRankingPage     = document.getElementById('btn-ranking-page');
@@ -2924,6 +2946,7 @@ if (btnAuth) {
     sounds.playSFX('click');
     await updateAuthUI();
     if (authModal) authModal.classList.remove('hidden');
+    refreshCaptcha();
     // Mostra o IP que será registrado (apenas se o modal novo de cadastro existe)
     if (detectedIpLabel && detectedIpLabel.textContent === '—') {
       detectMyIp().then(ip => {
@@ -2977,17 +3000,23 @@ if (btnLoginPasskey) {
 
     const dispName = dispNameEl ? dispNameEl.value.trim() : '';
     const password = passEl ? passEl.value : '';
+    const captchaAnswer = _captchaAnswerEl ? parseInt(_captchaAnswerEl.value, 10) : NaN;
 
     if (!dispName) return alert('Digite seu nick.');
     if (!password) return alert('Digite sua senha.');
+    if (!_captchaId || !Number.isFinite(captchaAnswer)) {
+      alert('Resolva o captcha para entrar (digite o resultado da conta).');
+      return;
+    }
 
     try {
-      await loginPasskey(dispName, password);
+      await loginPasskey(dispName, password, _captchaId, captchaAnswer);
       sounds.playSFX('success');
       alert('Autenticado com sucesso!');
       await updateAuthUI();
     } catch (err) {
       alert(`Erro na autenticação: ${err.message}`);
+      refreshCaptcha(); // resposta pode ter sido consumida no servidor
     }
   });
 }

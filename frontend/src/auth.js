@@ -30,6 +30,19 @@ async function safeJson(res) {
 }
 
 /**
+ * 0.1. Captcha matemático anti-bot (usado no login)
+ */
+export async function fetchCaptcha() {
+  try {
+    const res = await fetchWithTimeout(`${API_BASE}/captcha`, { cache: 'no-store' });
+    if (!res.ok) return null;
+    return await res.json();
+  } catch {
+    return null;
+  }
+}
+
+/**
  * 0. Detecta o IP que o servidor vê (mostrado no cadastro para consentimento)
  */
 export async function detectMyIp() {
@@ -86,11 +99,11 @@ export async function registerPasskey(displayName, password, deviceName, country
 /**
  * 2. Login com Nick + Senha + Passkey
  */
-export async function loginPasskey(displayName, password) {
+export async function loginPasskey(displayName, password, captchaId = '', captchaAnswer = null) {
   const startRes = await fetch(`${API_BASE}/login/start`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ display_name: displayName, password })
+    body: JSON.stringify({ display_name: displayName, password, captcha_id: captchaId, captcha_answer: captchaAnswer })
   });
 
   if (!startRes.ok) {

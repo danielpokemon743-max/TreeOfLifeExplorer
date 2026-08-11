@@ -1,4 +1,5 @@
 import uuid
+import random
 from datetime import datetime, timezone
 from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -55,6 +56,9 @@ class RegisterFinishRequest(BaseModel):
 class LoginStartRequest(BaseModel):
     display_name: str
     password: str
+    # Captcha anti-bot (obrigatório a partir de agora)
+    captcha_id: str = ""
+    captcha_answer: int | None = None
 
 class LoginFinishRequest(BaseModel):
     session_id: str
@@ -125,6 +129,41 @@ def _record_register_attempt(ip: str) -> bool:
     _prune_window(_register_counts[ip], _REGISTER_WINDOW_SECONDS)
     return len(_register_counts[ip]) <= _REGISTER_MAX_ATTEMPTS
 
+# ─── CAPTCHA MATEMÁTICO (anti-bot; em memória, 1 worker) ─────────────────────
+_captcha_tokens: dict[str, tuple[float, int]] = {}   # token -> (timestamp_criacao, resposta_certa)
+_CAPTCHA_TTL_SECONDS = 300                            # resposta válida por 5 minutos
+
+def _generate_captcha() -> tuple[str, str]:
+    """Gera uma conta simples, guarda a resposta esperada e devolve (token, pergunta)."""
+    a = random.randint(2, 9)
+    b = random.randint(1, 9)
+    op = random.choice(["+", "-", "x"])
+    if op == "+":
+        answer = a + b
+    elif op == "-":
+        a, b = max(a, b), min(a, b)
+        answer = a - b
+    else:
+        answer = a * b
+    token = f"cap_{uuid.uuid4().hex[:12]}"
+    now = _time.time()
+    # limpa tokens expirados para não crescer sem limite
+    expired = [k for k, (ts, _ans) in _captcha_tokens.items() if now - ts > _CAPTCHA_TTL_SECONDS]
+    for k in expired:
+        _captcha_tokens.pop(k, None)
+    _captcha_tokens[token] = (now, answer)
+    return token, f"Quanto é {a} {op} {b}?"
+
+def _consume_captcha(token: str | None, answer: int | None) -> bool:
+    """Consome um token de captcha (usado uma única vez); True se a resposta confere."""
+    if not token:
+        return False
+    entry = _captcha_tokens.pop(token, None)
+    if entry is None:
+        return False
+    _created, correct = entry
+    return answer is not None and int(answer) == correct
+
 def _rp_id(request: Request) -> str:
     """RP ID WebAuthn = domínio que o navegador REALMENTE está usando (sem porta).
 
@@ -134,6 +173,12 @@ def _rp_id(request: Request) -> str:
     host = request.headers.get("host", "").strip().lower()
     host = host.split(":")[0]  # remove porta
     return host or settings.rp_id
+
+@router.get("/captcha")
+async def new_captcha():
+    """Público: gera um captcha matemático (token + pergunta)."""
+    token, question = _generate_captcha()
+    return {"captcha_id": token, "question": question}
 
 @router.get("/detect-ip")
 async def detect_ip(request: Request):
@@ -254,6 +299,10 @@ async def login_start(body: LoginStartRequest, request: Request, db: AsyncSessio
             status_code=429,
             detail=f"Muitas tentativas de login. Tente novamente em {remaining} segundos.",
         )
+
+    # Captcha anti-bot: resposta errada/vazia = recusa (sem revelar se a senha existe)
+    if not _consume_captcha(body.captcha_id, body.captcha_answer):
+        raise HTTPException(status_code=400, detail="Captcha inválido ou resposta incorreta. Tente novamente.")
 
     result = await db.execute(select(User).where(sa_func.lower(User.display_name) == nick.lower()))
     user = result.scalar_one_or_none()
