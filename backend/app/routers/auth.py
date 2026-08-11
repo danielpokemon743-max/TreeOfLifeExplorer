@@ -58,7 +58,9 @@ class LoginStartRequest(BaseModel):
 
 class LoginFinishRequest(BaseModel):
     session_id: str
-    webauthn_response: dict
+    # O passkey aqui é opcional: aparelhos sem a chave de acesso (ex.: criar a conta
+    # no desktop e logar no celular) continuam via nick+senha, já validados no start.
+    webauthn_response: dict = {}
 
 class PasskeyAddStartRequest(BaseModel):
     device_name: str

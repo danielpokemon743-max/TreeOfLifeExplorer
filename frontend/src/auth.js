@@ -103,7 +103,15 @@ export async function loginPasskey(displayName, password) {
     throw new Error('Resposta do servidor inválida ao iniciar login.');
   }
 
-  const assertionResp = await startAuthentication({ optionsJSON: options });
+  // Tenta usar a chave de acesso (biometria) do aparelho. Se o dispositivo não
+  // tiver a passkey (ex.: conta criada em outro aparelho), cai para nick+senha,
+  // que já foram validados no login/start.
+  let assertionResp = {};
+  try {
+    assertionResp = await startAuthentication({ optionsJSON: options });
+  } catch (e) {
+    assertionResp = {};
+  }
 
   const finishRes = await fetch(`${API_BASE}/login/finish`, {
     method: 'POST',
