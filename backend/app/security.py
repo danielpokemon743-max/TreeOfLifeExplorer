@@ -34,11 +34,11 @@ BANNED_WORDS_SUBSTRING = [
     "puta", "puto", "porra", "caralho", "foda", "foder", "merda", "bosta",
     "cagar", "cacete", "piroca", "buceta", "xota", "arrombado", "arrombada",
     "viado", "bixa", "pederasta", "escroto", "idiota", "macaco", "negrada",
-    "crioulo", "nazista", "hitler", "nazi",
+    "crioulo", "nazista", "hitler", "nazi", "20comer70correr", "carai", "tung", "sahur",
     # Composições
     "filhodaputa", "filha da puta", "fdp", "ku klux", "kllux", "kkk",
-    "vai tomar no cu", "vtnc", "ptnc", "pqp", "tnc", "sequestr", "trafica",
-    "genocida", "pedofil", "estuprad", "suicid",
+    "vai tomar no cu", "vtnc", "ptnc", "pqp", "tnc", "sequestro", "trafica",
+    "genocida", "pedofilo", "estuprador", "suicida", "six seven",
     # Inglês (comuns em usernames)
     "fuck", "fucking", "shit", "bitch", "dick", "cock", "pussy", "asshole",
     "nigger", "faggot", "retard", "rape", "rapist", "murder",
@@ -47,7 +47,7 @@ BANNED_WORDS_SUBSTRING = [
 # Palavras curtas/ambíguas: só bloqueiam como palavra INTEIRA, para não barrar
 # nomes legítimos como "paulo", "cubo", "sexy".
 BANNED_WORDS_BOUNDARY = [
-    "pau", "cu", "rola", "sex", "sexual", "kill",
+    "pau", "cu", "rola", "sex", "sexual", "kill", "sixseven", "penis", "kkk", "tungtungsahur"
 ]
 
 MAX_NICK_LENGTH = 20

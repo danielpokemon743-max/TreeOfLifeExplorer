@@ -148,13 +148,15 @@ const BANNED_NICKWORDS = [
   'puta','puto','porra','caralho','foda','foder','merda','bosta','cagar','cacete',
   'piroca','buceta','xota','arrombado','arrombada','viado','bixa','pederasta',
   'escroto','idiota','macaco','negrada','crioulo','nazista','hitler','nazi',
+  '20comer70correr','carai','tung','sahur',
   'filhodaputa','filha da puta','fdp','ku klux','kllux','kkk','vai tomar no cu',
-  'vtnc','ptnc','pqp','tnc','sequestr','trafica','genocida','pedofil','estuprad','suicid',
+  'vtnc','ptnc','pqp','tnc','sequestro','trafica','genocida','pedofilo','estuprador','suicida',
+  'six seven',
   'fuck','fucking','shit','bitch','dick','cock','pussy','asshole','nigger',
   'faggot','retard','rape','rapist','murder'
 ];
 // Palavras curtas/ambíguas: só barram como palavra inteira (ex.: "pau" não barra "paulo")
-const NICK_BOUNDARY_WORDS = ['pau','cu','rola','sex','sexual','kill'];
+const NICK_BOUNDARY_WORDS = ['pau','cu','rola','sex','sexual','kill','sixseven','penis','kkk','tungtungsahur'];
 function _normNick(text) {
   return (text || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
 }
