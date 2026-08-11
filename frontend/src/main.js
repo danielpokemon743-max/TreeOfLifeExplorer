@@ -1201,9 +1201,7 @@ async function fetchExternalChildren(node) {
 
       const normChild = normalizeStr(childName);
       const exists = node.children.some(c =>
-
-    String(c.id)==String(child.id)
-
+        String(c.id)==String(child.id) || (c.name && normalizeStr(c.name) === normChild)
 );
       if (exists) continue;
 
