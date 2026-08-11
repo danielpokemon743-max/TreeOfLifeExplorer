@@ -3405,15 +3405,16 @@ async function openRankingPage(sort = _currentSort) {
     b.classList.toggle('active', b.dataset.sort === _currentSort);
   });
 
+  // Decide se o usuário logado tem acesso à aba Admin
+  await syncAdminTab();
+
+  // Sempre abre na aba de Ranking (pública); o admin troca clicando em 🛡️
+  showTab('ranking');
+
   if (rankingList) rankingList.innerHTML = '<p style="color: #94a3b8; text-align: center; padding: 20px;">Carregando…</p>';
 
-  let ranking = [];
-  try {
-    const data = await fetchRanking(_currentSort);
-    ranking = data.ranking || [];
-  } catch (e) {
-    ranking = [];
-  }
+  const data = await fetchRanking(_currentSort);
+  const ranking = (data && data.ranking) || [];
   if (!rankingList) return;
 
   rankingList.innerHTML = '';
@@ -3445,20 +3446,32 @@ async function openRankingPage(sort = _currentSort) {
   });
 }
 
-function showAdminTab() {
-  if (tabRanking) tabRanking.classList.remove('active');
-  if (tabAdmin) tabAdmin.classList.add('active');
-  if (rankingTabBody) rankingTabBody.classList.add('hidden');
-  if (adminTabBody) adminTabBody.classList.remove('hidden');
-  loadAdminPanel();
+// Verifica no backend se o usuário logado é admin e mostra/esconde a aba 🛡️
+async function syncAdminTab() {
+  let isAdmin = false;
+  try {
+    const check = await fetchAdminCheck();
+    isAdmin = !!(check && check.is_admin);
+  } catch {
+    isAdmin = false;
+  }
+  _isAdminUser = isAdmin;
+  if (tabAdmin) tabAdmin.classList.toggle('hidden', !_isAdminUser);
+  return _isAdminUser;
 }
 
-function showRankingTab() {
-  if (tabAdmin) tabAdmin.classList.remove('active');
-  if (tabRanking) tabRanking.classList.add('active');
-  if (adminTabBody) adminTabBody.classList.add('hidden');
-  if (rankingTabBody) rankingTabBody.classList.remove('hidden');
+// Alterna entre as abas do modal (ranking | admin)
+function showTab(which) {
+  const isAdmin = which === 'admin';
+  if (tabRanking) tabRanking.classList.toggle('active', !isAdmin);
+  if (tabAdmin) tabAdmin.classList.toggle('active', isAdmin);
+  if (rankingTabBody) rankingTabBody.classList.toggle('hidden', isAdmin);
+  if (adminTabBody) adminTabBody.classList.toggle('hidden', !isAdmin);
+  if (isAdmin) loadAdminPanel(); // só carrega/carrega de novo quando abre a aba
 }
+
+function showAdminTab() { showTab('admin'); }
+function showRankingTab() { showTab('ranking'); }
 
 async function loadAdminPanel() {
   if (adminMsg) adminMsg.textContent = '';
@@ -3468,25 +3481,27 @@ async function loadAdminPanel() {
   let users = [];
   let ip_bans = [];
   let myIp = '';
-  const stats = { users_ok: null, bans_ok: null, myip_ok: null };
+  let errors = [];
   try {
     const [ru, rb, rm] = await Promise.all([fetchAdminUsers(), fetchAdminIpBans(), fetchMyIp()]);
     users = ru.users || [];
     ip_bans = rb.ip_bans || [];
     myIp = rm.ip || '';
-    stats.users_ok = ru._ok !== false;
-    stats.bans_ok = rb._ok !== false;
-    stats.myip_ok = rm._ok !== false;
+    if (ru._ok === false) errors.push('lista de usuários (403/erro — confira ADMIN_NICKS no servidor)');
+    if (rb._ok === false) errors.push('lista de IPs');
+    if (rm && rm._ok === false) errors.push('seu IP');
   } catch (e) {
     if (adminUsersList) adminUsersList.innerHTML = '<p style="color:#e74c3c; text-align:center; padding:20px;">Erro ao carregar. Verifique sua conexão e tente novamente apertando em 🛡️ Admin.</p>';
     if (adminIpBansList) adminIpBansList.innerHTML = '<li style="color:#e74c3c; padding:8px;">Erro ao carregar.</li>';
     return;
   }
 
-  // Diagnóstico visível: resultado de cada chamada + IPs com registro
+  // Diagnóstico visível (ex.: "5 usuário(s) · 0 IP(s) banidos · seu IP: 189.x")
   if (adminMsg) {
-    adminMsg.style.color = '#2ecc71';
-    adminMsg.textContent = `✔ ${users.length} usuário(s) · ${ip_bans.length} IP(s) banidos · seu IP: ${myIp || '—'} · [users:${stats.users_ok ? 'ok' : 'erro'} bans:${stats.bans_ok ? 'ok' : 'erro'} myip:${stats.myip_ok ? 'ok' : 'erro'}]`;
+    adminMsg.style.color = errors.length ? '#e67e22' : '#2ecc71';
+    adminMsg.textContent = errors.length
+      ? `⚠ Sem resposta parcial de: ${errors.join(', ')}`
+      : `✔ ${users.length} usuário(s) · ${ip_bans.length} IP(s) banidos · seu IP: ${myIp || '—'}`;
   }
 
   // Botão "usar meu IP" dentro da barra de banir IP
@@ -3596,13 +3611,9 @@ function fillBanIpWeaponry(myIp) {
 }
 
 if (btnRankingPage) {
-  btnRankingPage.addEventListener('click', async () => {
+  btnRankingPage.addEventListener('click', () => {
     sounds.playSFX('click');
     openRankingPage(_currentSort);
-    const check = await fetchAdminCheck();
-    _isAdminUser = check.is_admin;
-    if (tabAdmin) tabAdmin.classList.toggle('hidden', !_isAdminUser);
-    if (!_isAdminUser) showRankingTab();
   });
 }
 

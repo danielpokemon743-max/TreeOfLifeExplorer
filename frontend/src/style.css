@@ -1114,6 +1114,10 @@ html { --lx: 50%; --ly: 35%; --lc: 0.5; --lr: 255; --lg: 255; --lb: 255; }
 }
 
 /* ─── RANKING GLOBAL + ADMIN ─────────────────────────────────────────────── */
+/* Regra global que falta: permite esconder qualquer elemento com .hidden */
+.hidden {
+  display: none !important;
+}
 .ranking-tabs {
   display: flex;
   gap: 8px;

@@ -446,14 +446,14 @@ export async function fetchAdminCheck() {
  */
 export async function fetchMyIp() {
   const token = getAuthToken();
-  if (!token) return { ip: '' };
+  if (!token) return { ip: '', _ok: true };
   try {
     const res = await fetchWithTimeout(`${ADMIN_BASE}/my-ip`, { headers: { 'Authorization': `Bearer ${token}` }, cache: 'no-store' });
-    if (!res.ok) return { ip: '' };
+    if (!res.ok) return { ip: '', _ok: false };
     const data = await res.json();
-    return { ip: data.ip || '' };
+    return { ip: data.ip || '', _ok: true };
   } catch {
-    return { ip: '' };
+    return { ip: '', _ok: false };
   }
 }
 
