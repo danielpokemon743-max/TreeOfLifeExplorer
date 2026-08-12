@@ -3222,9 +3222,56 @@ document.addEventListener('DOMContentLoaded', () => {
     setInterval(triggerJumpSequence, 4100); // Repete no mesmo ritmo da luz diagonal
 
     initDailyModule({
-      onExplore: (name) => { executeSearch(name); }
+      onExplore: async (sp) => { await exploreDailySpecies(sp); }
     });
 });
+
+// Navega até a espécie do dia. Se a espécie exata não estiver disponível
+// (não existe no banco local nem carrega da internet), navega até o ancestral
+// mais próximo presente na árvore.
+async function exploreDailySpecies(sp) {
+  const name = sp && sp.name ? sp.name : '';
+  if (!name) return;
+
+  let foundNode = null;
+  if (rootNodeInstance && typeof findNodeInLocalData === 'function') {
+    foundNode = findNodeInLocalData(name);
+  }
+
+  if (!foundNode && typeof fetchAndInsertExternalTaxon === 'function') {
+    try {
+      foundNode = await fetchAndInsertExternalTaxon(name);
+    } catch (e) {
+      foundNode = null;
+    }
+  }
+
+  const lineage = (sp && Array.isArray(sp.lineage)) ? sp.lineage : [];
+  if (!foundNode && lineage.length > 0) {
+    // Procura o ancestral mais próximo que exista na árvore
+    for (let i = lineage.length - 2; i >= 0; i--) {
+      const anc = findNodeInLocalData(lineage[i]);
+      if (anc) { foundNode = anc; break; }
+    }
+  }
+
+  if (foundNode) {
+    let p = foundNode.parent;
+    while (p) {
+      p.expanded = true;
+      p = p.parent;
+    }
+    sounds.playSFX('success');
+    if (renderer && typeof renderer.focusOnNode === 'function') {
+      if (typeof renderer._recomputeLayout === 'function') renderer._recomputeLayout();
+      renderer.focusOnNode(foundNode, 1.4);
+    }
+    showTaxonInfo(foundNode);
+  } else {
+    sounds.playSFX('error');
+    showAchievementNotification('', '🌿 Espécie do Dia', `"${name}" não foi encontrado no banco nem na internet neste momento.`);
+  }
+}
 
 
 // Novos Elementos de Áudio

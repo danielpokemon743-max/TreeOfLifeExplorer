@@ -479,7 +479,7 @@ export async function initDailyModule({ onExplore }) {
     if (exploreBtn) {
       exploreBtn.onclick = () => {
         modal.classList.add('hidden');
-        if (typeof onExplore === 'function') onExplore(sp.name);
+        if (typeof onExplore === 'function') onExplore(sp);
       };
     }
 
