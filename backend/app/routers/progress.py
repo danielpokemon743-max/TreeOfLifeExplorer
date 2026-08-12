@@ -13,7 +13,7 @@ router = APIRouter(prefix="/api/progress", tags=["Progress"])
 
 # ─── SISTEMA DE XP E NÍVEIS ────────────────────────────────────────────────────
 # XP ganho por ação do usuário
-XP_DISCOVERY   = 15   # descobrir um táxon novo
+XP_DISCOVERY   = 3    # descobrir um táxon novo
 XP_FAVORITE    = 10   # favoritar um táxon novo
 XP_ACHIEVEMENT = 40   # desbloquear uma conquista
 

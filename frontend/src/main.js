@@ -1,6 +1,7 @@
 import './style.css';
 import { TreeNode, TreeRenderer } from './TreeRenderer.js';
 import { sounds }                 from './SoundManager.js';
+import { initDailyModule }        from './daily.js';
 import { 
   registerPasskey, 
   loginPasskey, 
@@ -3219,6 +3220,10 @@ document.addEventListener('DOMContentLoaded', () => {
     // A luz diagonal leva 4s, então disparamos o pulo logo em seguida (a cada 4.1s)
     triggerJumpSequence(); // Inicia imediatamente
     setInterval(triggerJumpSequence, 4100); // Repete no mesmo ritmo da luz diagonal
+
+    initDailyModule({
+      onExplore: (name) => { executeSearch(name); }
+    });
 });
 
 
@@ -3846,6 +3851,8 @@ function closeAllMenus() {
   if (achievementsModal) achievementsModal.classList.add('hidden');
   if (backgroundsModal) backgroundsModal.classList.add('hidden');
   if (rankingModal) rankingModal.classList.add('hidden');
+  const dailyModal = document.getElementById('daily-modal');
+  if (dailyModal) dailyModal.classList.add('hidden');
   if (statsPanel) statsPanel.classList.add('hidden');
   currentSelectedNode = null;
   closeAutocomplete();
