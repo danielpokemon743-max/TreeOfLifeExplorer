@@ -2,6 +2,7 @@ import './style.css';
 import { TreeNode, TreeRenderer } from './TreeRenderer.js';
 import { sounds }                 from './SoundManager.js';
 import { initDailyModule }        from './daily.js';
+import { openModal, closeModal, applyLighting, initFX } from './fx.js';
 import { 
   registerPasskey, 
   loginPasskey, 
@@ -1901,9 +1902,8 @@ export function initSearchModule(renderer, rootNode) {
 async function showTaxonInfo(node) {
   if (!infoPanel || !node) return;
  
-  sounds.playSFX('click');
   currentSelectedNode = node;
-  infoPanel.classList.remove('hidden');
+  openModal(infoPanel, 'open');
   dismissHint();
  
   if (taxonName) {
@@ -1959,7 +1959,7 @@ async function showTaxonInfo(node) {
 
   if (descResult && descResult.nonBiological && window._bioFilterEnabled) {
     removeNodeAndDescendants(node);
-    infoPanel.classList.add('hidden');
+    closeModal(infoPanel, 'close');
     currentSelectedNode = null;
     updateBioFilterUI();
     if (renderer) {
@@ -2963,13 +2963,13 @@ function showLevelUpToast(level) {
  
 if (authModal) {
   authModal.addEventListener('click', (e) => {
-    if (e.target === authModal) authModal.classList.add('hidden');
+    if (e.target === authModal) closeModal(authModal);
   });
 }
 
 if (helpModal) {
   helpModal.addEventListener('click', (e) => {
-    if (e.target === helpModal) helpModal.classList.add('hidden');
+    if (e.target === helpModal) closeModal(helpModal);
   });
 }
 
@@ -2977,7 +2977,7 @@ if (btnAuth) {
   btnAuth.addEventListener('click', async () => {
     sounds.playSFX('click');
     await updateAuthUI();
-    if (authModal) authModal.classList.remove('hidden');
+    if (authModal) openModal(authModal);
     refreshCaptcha();
     // Mostra o IP que será registrado (apenas se o modal novo de cadastro existe)
     if (detectedIpLabel && detectedIpLabel.textContent === '—') {
@@ -2990,7 +2990,7 @@ if (btnAuth) {
  
 if (closeAuthBtn) {
   closeAuthBtn.addEventListener('click', () => {
-    if (authModal) authModal.classList.add('hidden');
+    if (authModal) closeModal(authModal);
   });
 }
  
@@ -3127,8 +3127,8 @@ if (btnZoomIn) btnZoomIn.addEventListener('click', () => renderer?.zoomBy?.(1.25
 if (btnZoomOut) btnZoomOut.addEventListener('click', () => renderer?.zoomBy?.(0.8));
 if (btnReset) btnReset.addEventListener('click', () => rootNode && renderer?.focusOnNode?.(rootNode, 1.0));
 if (btnSources && statsPanel) btnSources.addEventListener('click', () => statsPanel.classList.toggle('hidden'));
-if (btnHelp && helpModal) btnHelp.addEventListener('click', () => helpModal.classList.remove('hidden'));
-if (closeHelpBtn && helpModal) closeHelpBtn.addEventListener('click', () => helpModal.classList.add('hidden'));
+if (btnHelp && helpModal) btnHelp.addEventListener('click', () => openModal(helpModal));
+if (closeHelpBtn && helpModal) closeHelpBtn.addEventListener('click', () => closeModal(helpModal));
 
 // ─── BARRA SUPERIOR MINIMIZÁVEL ────────────────────────────────────────────
 const topBar = document.querySelector('.top-bar');
@@ -3204,7 +3204,7 @@ updateBioFilterUI();
  
 if (closeInfoBtn) {
   closeInfoBtn.addEventListener('click', () => {
-    if (infoPanel) infoPanel.classList.add('hidden');
+    if (infoPanel) closeModal(infoPanel, 'close');
     currentSelectedNode = null;
   });
 }
@@ -3372,7 +3372,7 @@ if (selectMusic) {
 async function openFavoritesPage() {
   if (!currentProfile) return alert('Autentique-se para ver seus favoritos.');
   const favs = await fetchFavorites();
-  if (favsModal) favsModal.classList.remove('hidden');
+  if (favsModal) openModal(favsModal);
   if (favsList) {
     favsList.innerHTML = '';
     if (!favs || favs.length === 0) {
@@ -3429,12 +3429,12 @@ if (btnFavsPage) {
 }
 if (closeFavsBtn && favsModal) {
   closeFavsBtn.addEventListener('click', () => {
-    favsModal.classList.add('hidden');
+    closeModal(favsModal);
   });
 }
 if (favsModal) {
   favsModal.addEventListener('click', (e) => {
-    if (e.target === favsModal) favsModal.classList.add('hidden');
+    if (e.target === favsModal) closeModal(favsModal);
   });
 }
 
@@ -3477,7 +3477,7 @@ const ACHIEVEMENT_ICONS = {
 const SECRET_ACHIEVEMENTS = new Set(['KONAMI']);
 
 async function openAchievementsPage() {
-  if (achievementsModal) achievementsModal.classList.remove('hidden');
+  if (achievementsModal) openModal(achievementsModal);
   if (!achievementsList) return;
 
   achievementsList.innerHTML = '<p style="color: #94a3b8; text-align: center; padding: 20px;">Carregando…</p>';
@@ -3571,12 +3571,12 @@ if (btnAchievementsPage) {
 }
 if (closeAchievementsBtn && achievementsModal) {
   closeAchievementsBtn.addEventListener('click', () => {
-    achievementsModal.classList.add('hidden');
+    closeModal(achievementsModal);
   });
 }
 if (achievementsModal) {
   achievementsModal.addEventListener('click', (e) => {
-    if (e.target === achievementsModal) achievementsModal.classList.add('hidden');
+    if (e.target === achievementsModal) closeModal(achievementsModal);
   });
 }
 
@@ -3603,7 +3603,7 @@ function formatHours(hours) {
 }
 
 async function openRankingPage(sort = _currentSort) {
-  if (rankingModal) rankingModal.classList.remove('hidden');
+  if (rankingModal) openModal(rankingModal, 'podium');
   _currentSort = sort || 'xp';
 
   // Sincroniza botões de ordenação
@@ -3631,8 +3631,9 @@ async function openRankingPage(sort = _currentSort) {
 
   ranking.forEach(u => {
     const item = document.createElement('div');
-    item.className = 'ranking-item' + (u.position <= 3 ? ' top' : '');
+    item.className = 'ranking-item' + (u.position <= 3 ? ' top' : '') + ' rank-' + u.position;
     item.style.cssText = 'display:flex; align-items:center; gap:10px; padding:10px 12px; margin-bottom:8px; background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.08); border-radius:10px;';
+    applyLighting(item);
     item.innerHTML = `
       <div style="width:38px; text-align:center; font-size:16px; flex-shrink:0;">${medalFor(u.position)}</div>
       <div style="flex:1; min-width:0;">
@@ -3825,11 +3826,11 @@ if (btnRankingPage) {
 
 if (rankingModal) {
   rankingModal.addEventListener('click', (e) => {
-    if (e.target === rankingModal) rankingModal.classList.add('hidden');
+    if (e.target === rankingModal) closeModal(rankingModal);
   });
 }
 if (closeRankingBtn && rankingModal) {
-  closeRankingBtn.addEventListener('click', () => rankingModal.classList.add('hidden'));
+  closeRankingBtn.addEventListener('click', () => closeModal(rankingModal));
 }
 if (tabRanking) tabRanking.addEventListener('click', showRankingTab);
 if (tabAdmin) tabAdmin.addEventListener('click', showAdminTab);
@@ -3893,7 +3894,7 @@ function openBackgroundsPage() {
       });
     });
   }
-  backgroundsModal.classList.remove('hidden');
+  openModal(backgroundsModal);
 }
 
 if (btnBackgroundsPage) {
@@ -3905,7 +3906,7 @@ if (btnBackgroundsPage) {
 }
 if (closeBackgroundsBtn && backgroundsModal) {
   closeBackgroundsBtn.addEventListener('click', () => {
-    backgroundsModal.classList.add('hidden');
+    closeModal(backgroundsModal);
   });
 }
 const btnToggleLight = document.getElementById('btn-toggle-light');
@@ -3919,7 +3920,7 @@ if (btnToggleLight) {
 }
 if (backgroundsModal) {
   backgroundsModal.addEventListener('click', (e) => {
-    if (e.target === backgroundsModal) backgroundsModal.classList.add('hidden');
+    if (e.target === backgroundsModal) closeModal(backgroundsModal);
   });
 }
 
@@ -3961,16 +3962,16 @@ document.addEventListener('keydown', (e) => {
 });
 
 function closeAllMenus() {
-  if (infoPanel) infoPanel.classList.add('hidden');
-  if (helpModal) helpModal.classList.add('hidden');
-  if (authModal) authModal.classList.add('hidden');
-  if (favsModal) favsModal.classList.add('hidden');
-  if (achievementsModal) achievementsModal.classList.add('hidden');
-  if (backgroundsModal) backgroundsModal.classList.add('hidden');
-  if (rankingModal) rankingModal.classList.add('hidden');
+  if (infoPanel) closeModal(infoPanel, null);
+  if (helpModal) closeModal(helpModal, null);
+  if (authModal) closeModal(authModal, null);
+  if (favsModal) closeModal(favsModal, null);
+  if (achievementsModal) closeModal(achievementsModal, null);
+  if (backgroundsModal) closeModal(backgroundsModal, null);
+  if (rankingModal) closeModal(rankingModal, null);
   const dailyModal = document.getElementById('daily-modal');
-  if (dailyModal) dailyModal.classList.add('hidden');
-  if (statsPanel) statsPanel.classList.add('hidden');
+  if (dailyModal) closeModal(dailyModal, null);
+  if (statsPanel) closeModal(statsPanel, null);
   currentSelectedNode = null;
   closeAutocomplete();
 }
@@ -4054,3 +4055,6 @@ async function handleDevCheat() {
     showAchievementNotification('', '🧪 Modo Dev', 'Erro ao usar comando de desenvolpedor. Tente novamente.');
   }
 }
+
+// ─── EFEITOS VISUAIS: luz do ponteiro, iluminação dinâmica e sons ────────────
+initFX();

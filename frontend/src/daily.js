@@ -3,6 +3,8 @@
  * Seleção determinística pela data (muda todo dia).
  */
 
+import { openModal, closeModal } from './fx.js';
+
 const DAY_MS = 86400000;
 
 function dayIndex() {
@@ -530,13 +532,13 @@ export async function initDailyModule({ onExplore, getLocalPool }) {
   let loading = false;
 
   openBtn.addEventListener('click', () => {
-    modal.classList.remove('hidden');
+    openModal(modal, 'open');
     loadDaily();
   });
 
-  if (closeBtn) closeBtn.addEventListener('click', () => modal.classList.add('hidden'));
+  if (closeBtn) closeBtn.addEventListener('click', () => closeModal(modal, 'close'));
   modal.addEventListener('click', (e) => {
-    if (e.target === modal) modal.classList.add('hidden');
+    if (e.target === modal) closeModal(modal, 'close');
   });
   if (nextBtn) nextBtn.addEventListener('click', () => {
     if (loading) return;
@@ -594,7 +596,7 @@ export async function initDailyModule({ onExplore, getLocalPool }) {
 
     if (exploreBtn) {
       exploreBtn.onclick = () => {
-        modal.classList.add('hidden');
+        closeModal(modal, 'close');
         if (typeof onExplore === 'function') onExplore(sp);
       };
     }

@@ -808,7 +808,7 @@ body {
   align-items: center !important;
   justify-content: center !important;
   z-index: 999999 !important;
-  opacity: 1 !important;
+  opacity: 1;
   pointer-events: auto !important;
 }
 
@@ -1224,3 +1224,120 @@ html { --lx: 50%; --ly: 35%; --lc: 0.5; --lr: 255; --lg: 255; --lb: 255; }
 .admin-user-item.banned {
   opacity: 0.7;
 }
+
+/* ══════════════════════════════════════════════════════════════════════════
+   🌟 EFEITOS: luz do ponteiro, iluminação dinâmica, sons e animações
+   ══════════════════════════════════════════════════════════════════════════ */
+
+/* ── Luz global que segue o mouse / dedo (mobile) ────────────────────────── */
+#cursor-glow {
+  position: fixed;
+  top: 0; left: 0;
+  width: 100vw; height: 100vh;
+  pointer-events: none;
+  z-index: 9990;
+  mix-blend-mode: screen;
+  opacity: 1;
+  transition: opacity 0.4s ease;
+  background: radial-gradient(
+    240px circle at var(--gx, 50vw) var(--gy, 50vh),
+    rgba(155, 120, 255, 0.16),
+    rgba(80, 200, 255, 0.08) 32%,
+    transparent 62%
+  );
+}
+#cursor-glow.idle { opacity: 0; }
+
+/* ── Iluminação dinâmica por elemento (.fx-lit) ─────────────────────────── */
+.fx-lit {
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;
+}
+.fx-lit::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.25s ease;
+  z-index: 0;
+  background: radial-gradient(
+    130px circle at var(--lx, 50%) var(--ly, 50%),
+    rgba(255, 255, 255, 0.30),
+    rgba(155, 120, 255, 0.14) 42%,
+    transparent 72%
+  );
+}
+.fx-lit.fx-lit-on::before { opacity: 1; }
+.fx-lit.fx-lit-on {
+  box-shadow: 0 0 14px rgba(155, 120, 255, 0.35), inset 0 0 10px rgba(255, 255, 255, 0.06);
+}
+.fx-lit > * { position: relative; z-index: 1; }
+
+/* Barra de busca: foco de luz interno mais forte */
+#search-input.fx-lit::before {
+  background: radial-gradient(
+    80px circle at var(--lx, 50%) var(--ly, 50%),
+    rgba(155, 120, 255, 0.32),
+    transparent 70%
+  );
+}
+
+/* ── Brilho ao digitar na busca ─────────────────────────────────────────── */
+#search-input.fx-typing {
+  animation: fxTypePulse 0.3s ease;
+}
+@keyframes fxTypePulse {
+  0%   { box-shadow: 0 0 12px var(--purple-glow); }
+  40%  { box-shadow: 0 0 0 3px rgba(155, 120, 255, 0.25), 0 0 18px rgba(155, 120, 255, 0.55); }
+  100% { box-shadow: 0 0 12px var(--purple-glow); }
+}
+
+/* ── Animação de abrir / fechar modais ─────────────────────────────────── */
+.modal-overlay.fx-modal-enter { animation: fxModalIn 0.28s cubic-bezier(.2, .8, .2, 1) both; }
+.modal-overlay.fx-modal-leave  { animation: fxModalOut 0.2s ease both; }
+.modal-overlay.fx-modal-enter .modal-content { animation: fxContentIn 0.32s cubic-bezier(.2, .8, .2, 1) both; }
+.modal-overlay.fx-modal-leave  .modal-content { animation: fxContentOut 0.18s ease both; }
+
+@keyframes fxModalIn  { from { opacity: 0; } to { opacity: 1; } }
+@keyframes fxModalOut { from { opacity: 1; } to { opacity: 0; } }
+@keyframes fxContentIn  {
+  from { transform: translateY(20px) scale(0.92); opacity: 0; }
+  to   { transform: none; opacity: 1; }
+}
+@keyframes fxContentOut {
+  from { transform: none; opacity: 1; }
+  to   { transform: translateY(12px) scale(0.96); opacity: 0; }
+}
+
+/* ── Animações dos 3 primeiros do ranking ──────────────────────────────── */
+.ranking-item { position: relative; overflow: hidden; }
+.ranking-item.top {
+  animation: fxPodiumRise 0.6s cubic-bezier(.2, .9, .25, 1) both;
+}
+@keyframes fxPodiumRise {
+  from { transform: translateY(14px) scale(0.96); opacity: 0; }
+  to   { transform: none; opacity: 1; }
+}
+.ranking-item.rank-1 {
+  border-color: rgba(241, 196, 15, 0.55) !important;
+  background: linear-gradient(90deg, rgba(241, 196, 15, 0.18), rgba(241, 196, 15, 0.05)) !important;
+  box-shadow: 0 0 18px rgba(241, 196, 15, 0.35);
+  animation: fxGoldPulse 2.2s ease-in-out infinite, fxPodiumRise 0.6s cubic-bezier(.2, .9, .25, 1) both;
+}
+.ranking-item.rank-2 {
+  border-color: rgba(192, 200, 210, 0.55) !important;
+  background: linear-gradient(90deg, rgba(192, 200, 210, 0.16), rgba(192, 200, 210, 0.04)) !important;
+  box-shadow: 0 0 14px rgba(192, 200, 210, 0.30);
+  animation: fxSilverPulse 2.4s ease-in-out infinite, fxPodiumRise 0.6s cubic-bezier(.2, .9, .25, 1) both;
+}
+.ranking-item.rank-3 {
+  border-color: rgba(205, 127, 50, 0.55) !important;
+  background: linear-gradient(90deg, rgba(205, 127, 50, 0.18), rgba(205, 127, 50, 0.05)) !important;
+  box-shadow: 0 0 14px rgba(205, 127, 50, 0.30);
+  animation: fxBronzePulse 2.6s ease-in-out infinite, fxPodiumRise 0.6s cubic-bezier(.2, .9, .25, 1) both;
+}
+@keyframes fxGoldPulse   { 0%, 100% { box-shadow: 0 0 12px rgba(241, 196, 15, 0.25); } 50% { box-shadow: 0 0 26px rgba(241, 196, 15, 0.6); } }
+@keyframes fxSilverPulse { 0%, 100% { box-shadow: 0 0 10px rgba(192, 200, 210, 0.20); } 50% { box-shadow: 0 0 22px rgba(192, 200, 210, 0.5); } }
+@keyframes fxBronzePulse { 0%, 100% { box-shadow: 0 0 10px rgba(205, 127, 50, 0.20); } 50% { box-shadow: 0 0 22px rgba(205, 127, 50, 0.5); } }

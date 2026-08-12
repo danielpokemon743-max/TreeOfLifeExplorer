@@ -65,6 +65,26 @@ class SoundManager {
       case 'click':
         this._playTone(800, 0.04, 'sine', 0.08, now);
         break;
+      case 'hover':
+        this._playTone(600, 0.03, 'sine', 0.05, now);
+        break;
+      case 'type':
+        this._playTone(900, 0.025, 'sine', 0.04, now);
+        break;
+      case 'open':
+        this._playTone(392.00, 0.10, 'sine', 0.07, now);
+        this._playTone(523.25, 0.15, 'sine', 0.07, now + 0.05);
+        break;
+      case 'close':
+        this._playTone(523.25, 0.10, 'sine', 0.07, now);
+        this._playTone(392.00, 0.16, 'sine', 0.07, now + 0.06);
+        break;
+      case 'podium':
+        this._playTone(523.25, 0.10, 'sine', 0.08, now);
+        this._playTone(659.25, 0.12, 'sine', 0.08, now + 0.10);
+        this._playTone(783.99, 0.15, 'sine', 0.08, now + 0.20);
+        this._playTone(1046.50, 0.25, 'sine', 0.10, now + 0.30);
+        break;
       case 'expand':
         this._playSweep(250, 650, 0.12, 'triangle', 0.12, now);
         break;
