@@ -1120,6 +1120,16 @@ async function runValidationTests() {
 window.runValidationTests = runValidationTests;
 
 // ─── LAZY LOADING EXTERNO (CATALOGUE OF LIFE) COM VALIDAÇÃO ──────────────────
+let _apiDownToast = 0;
+function notifyExternalApiDown(node) {
+  const now = Date.now();
+  if (now - _apiDownToast < 10000) return; // evita spam
+  _apiDownToast = now;
+  const name = node && node.name ? node.name : 'este táxon';
+  console.warn(`API externa indisponível ao expandir "${name}" (503).`);
+  showAchievementNotification('', '🌐 Sem conexão com a internet', `Não foi possível carregar os táxons de "${name}". Clique novamente em instantes.`);
+}
+
 async function fetchExternalChildren(node) {
   if (!node || !node.name || node._externalLoaded || node._externalLoading) return;
   node._externalLoading = true;
@@ -1133,7 +1143,13 @@ async function fetchExternalChildren(node) {
   try {
     const searchRes = await fetch(`https://api.checklistbank.org/dataset/3LR/nameusage/search?q=${encodeURIComponent(node.name)}&limit=8`);
 
-    if (!searchRes.ok) throw new Error("Erro na API");
+    if (!searchRes.ok) {
+      node._externalLoaded = false; // permite tentar de novo em outro clique
+      node.loaded = true;
+      node._externalLoading = false;
+      notifyExternalApiDown(node);
+      return;
+    }
     const searchData = await searchRes.json();
 
     const results = searchData.result;
@@ -1182,7 +1198,13 @@ async function fetchExternalChildren(node) {
     }
 
     const childrenRes = await fetch(`https://api.checklistbank.org/dataset/3LR/tree/${taxonId}/children?limit=50`);
-    if (!childrenRes.ok) throw new Error("Erro ao buscar filhos");
+    if (!childrenRes.ok) {
+      node._externalLoaded = false;
+      node.loaded = true;
+      node._externalLoading = false;
+      notifyExternalApiDown(node);
+      return;
+    }
     const childrenData = await childrenRes.json();
 
     const childList = childrenData.result;
