@@ -470,32 +470,39 @@ function buildPool(getLocalPool) {
 }
 
 // Encontra o próximo candidato válido: com imagem, descrição e linhagem.
-async function pickValid(getLocalPool, avoidName) {
+// cursorHint: índice do último ancorado; null = começa no "dia" (determinístico).
+async function pickValid(getLocalPool, cursorHint) {
   const pool = buildPool(getLocalPool);
   if (pool.length === 0) return null;
-  const avoid = avoidName ? normalizeStr(avoidName) : null;
+
+  let idx;
+  if (cursorHint === null || cursorHint === undefined) {
+    idx = dayIndex() % pool.length;
+  } else {
+    idx = (cursorHint + 1) % pool.length; // avança para não repetir
+  }
+
   const MAX_TRIES = Math.min(40, pool.length);
-  let idx = dayIndex() % pool.length;
   for (let tries = 0; tries < MAX_TRIES; tries++) {
     const cand = pool[idx];
+    const pickIdx = idx;
     idx = (idx + 1) % pool.length;
-    if (avoid && normalizeStr(cand.name) === avoid) continue;
     const data = await fetchWikiSummary(cand.wikiTitle || cand.name);
     if (data && data.extract && data.extract.trim()) {
       const img = data?.thumbnail?.source || data?.originalimage?.source || '';
       if (img && cand.lineage && cand.lineage.length > 0) {
-        return { sp: cand, data };
+        return { sp: cand, data, idx: pickIdx };
       }
     }
   }
   // Fallback: aceita o primeiro com descrição, mesmo sem imagem
   for (let tries = 0; tries < MAX_TRIES; tries++) {
     const cand = pool[idx];
+    const pickIdx = idx;
     idx = (idx + 1) % pool.length;
-    if (avoid && normalizeStr(cand.name) === avoid) continue;
     const data = await fetchWikiSummary(cand.wikiTitle || cand.name);
     if (data && data.extract && data.extract.trim()) {
-      return { sp: cand, data };
+      return { sp: cand, data, idx: pickIdx };
     }
   }
   return null;
@@ -519,6 +526,7 @@ export async function initDailyModule({ onExplore, getLocalPool }) {
   if (!modal || !openBtn) return;
 
   let currentSpecies = null;
+  let cursorHint = null;
   let loading = false;
 
   openBtn.addEventListener('click', () => {
@@ -550,8 +558,7 @@ export async function initDailyModule({ onExplore, getLocalPool }) {
     if (speciesSource) speciesSource.textContent = '';
     if (curiosityText) curiosityText.textContent = getCuriosityOfDay();
 
-    const avoidName = (forceSwap && currentSpecies) ? currentSpecies.name : '';
-    const pick = await pickValid(getLocalPool, avoidName);
+    const pick = await pickValid(getLocalPool, forceSwap ? cursorHint : null);
     loading = false;
     if (nextBtn) nextBtn.disabled = false;
 
@@ -565,6 +572,7 @@ export async function initDailyModule({ onExplore, getLocalPool }) {
     const sp = pick.sp;
     const data = pick.data;
     currentSpecies = sp;
+    cursorHint = pick.idx;
 
     if (speciesName) speciesName.textContent = sp.name;
     if (speciesLineage) {
