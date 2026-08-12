@@ -586,6 +586,34 @@ body {
 }
 @keyframes daily-spin { to { transform: rotate(360deg); } }
 
+/* Spinner de carregamento do painel de informações do táxon */
+.taxon-loader {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  color: #94a3b8;
+  padding: 6px 0;
+}
+.taxon-loader .daily-spinner {
+  width: 20px;
+  height: 20px;
+  border-width: 3px;
+  flex-shrink: 0;
+}
+.taxon-loader-img {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 180px;
+  background: #0d1526;
+  border-radius: 10px;
+}
+.taxon-loader-img .daily-spinner {
+  width: 34px;
+  height: 34px;
+}
+
 /* Lista de fontes */
 .sources-section h3 {
   font-family: 'Outfit', sans-serif;

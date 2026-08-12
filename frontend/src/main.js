@@ -1915,8 +1915,19 @@ async function showTaxonInfo(node) {
     taxonRank.style.background = node.color || '#9B59B6';
   }
   
-  if (taxonDesc) taxonDesc.textContent = 'Buscando resumos científicos…';
-  if (taxonImgWrap) taxonImgWrap.innerHTML = `<div class="taxon-img-placeholder">⏳</div>`;
+  if (taxonDesc) {
+    taxonDesc.innerHTML = `
+      <div class="taxon-loader">
+        <div class="daily-spinner"></div>
+        <span>Carregando informações…</span>
+      </div>`;
+  }
+  if (taxonImgWrap) {
+    taxonImgWrap.innerHTML = `
+      <div class="taxon-loader-img">
+        <div class="daily-spinner"></div>
+      </div>`;
+  }
   if (wikiLink) wikiLink.style.display = 'none';
  
   updateLineageUI(node);
