@@ -550,9 +550,13 @@ export async function initDailyModule({ onExplore, getLocalPool }) {
 
     if (speciesName) speciesName.textContent = '…';
     if (speciesImg) {
-      speciesImg.innerHTML = '<div style="width:100%;height:200px;display:flex;align-items:center;justify-content:center;background:#0d1526;border-radius:10px;color:#94a3b8;">⏳ Procurando espécie com informação completa…</div>';
+      speciesImg.innerHTML = `
+        <div class="daily-loader">
+          <div class="daily-spinner"></div>
+          <span>Procurando espécie com informação completa…</span>
+        </div>`;
     }
-    if (speciesDesc) speciesDesc.textContent = 'Buscando espécie com descrição, imagem e linhagem…';
+    if (speciesDesc) speciesDesc.textContent = 'Buscando descrição científica…';
     if (speciesLineage) speciesLineage.textContent = '…';
     if (speciesDist) speciesDist.textContent = '…';
     if (speciesSource) speciesSource.textContent = '';
