@@ -423,30 +423,103 @@ const SCIENCE_CURIOSITIES = [
 ];
 
 // ─── LÓGICA DE SELEÇÃO DIÁRIA ────────────────────────────────────────────────
-export function getSpeciesOfDay() {
-  const i = dayIndex() % SPECIES_OF_DAY.length;
-  return SPECIES_OF_DAY[i];
-}
-
 export function getCuriosityOfDay() {
   const i = dayIndex() % SCIENCE_CURIOSITIES.length;
   return SCIENCE_CURIOSITIES[i];
 }
 
+function normalizeStr(value) {
+  return String(value ?? '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
+}
+
+// Monta o pool de candidatos = lista curada + táxons do banco local (da árvore).
+function buildPool(getLocalPool) {
+  const map = new Map();
+  for (const sp of SPECIES_OF_DAY) {
+    const key = normalizeStr(sp.name);
+    if (!map.has(key)) {
+      map.set(key, {
+        name: sp.name,
+        wikiTitle: sp.wikiTitle || sp.name,
+        lineage: sp.lineage || [],
+        distribution: sp.distribution || '',
+        source: 'curada'
+      });
+    }
+  }
+  if (typeof getLocalPool === 'function') {
+    let local;
+    try { local = getLocalPool(); } catch (e) { local = []; }
+    if (Array.isArray(local)) {
+      for (const t of local) {
+        if (!t || !t.name) continue;
+        const key = normalizeStr(t.name);
+        if (!key) continue;
+        if (map.has(key)) continue;
+        map.set(key, {
+          name: t.name,
+          wikiTitle: t.name,
+          lineage: Array.isArray(t.lineage) ? t.lineage : [t.name],
+          distribution: '',
+          source: 'local'
+        });
+      }
+    }
+  }
+  return [...map.values()];
+}
+
+// Encontra o próximo candidato válido: com imagem, descrição e linhagem.
+async function pickValid(getLocalPool, avoidName) {
+  const pool = buildPool(getLocalPool);
+  if (pool.length === 0) return null;
+  const avoid = avoidName ? normalizeStr(avoidName) : null;
+  const MAX_TRIES = Math.min(40, pool.length);
+  let idx = dayIndex() % pool.length;
+  for (let tries = 0; tries < MAX_TRIES; tries++) {
+    const cand = pool[idx];
+    idx = (idx + 1) % pool.length;
+    if (avoid && normalizeStr(cand.name) === avoid) continue;
+    const data = await fetchWikiSummary(cand.wikiTitle || cand.name);
+    if (data && data.extract && data.extract.trim()) {
+      const img = data?.thumbnail?.source || data?.originalimage?.source || '';
+      if (img && cand.lineage && cand.lineage.length > 0) {
+        return { sp: cand, data };
+      }
+    }
+  }
+  // Fallback: aceita o primeiro com descrição, mesmo sem imagem
+  for (let tries = 0; tries < MAX_TRIES; tries++) {
+    const cand = pool[idx];
+    idx = (idx + 1) % pool.length;
+    if (avoid && normalizeStr(cand.name) === avoid) continue;
+    const data = await fetchWikiSummary(cand.wikiTitle || cand.name);
+    if (data && data.extract && data.extract.trim()) {
+      return { sp: cand, data };
+    }
+  }
+  return null;
+}
+
 // ─── UI DO MODAL ─────────────────────────────────────────────────────────────
-export async function initDailyModule({ onExplore }) {
+export async function initDailyModule({ onExplore, getLocalPool }) {
   const modal = document.getElementById('daily-modal');
   const openBtn = document.getElementById('btn-daily');
   const closeBtn = document.getElementById('close-daily');
+  const nextBtn = document.getElementById('daily-next-btn');
   const speciesName = document.getElementById('daily-species-name');
   const speciesImg = document.getElementById('daily-species-img');
   const speciesDesc = document.getElementById('daily-species-desc');
   const speciesLineage = document.getElementById('daily-species-lineage');
   const speciesDist = document.getElementById('daily-species-dist');
+  const speciesSource = document.getElementById('daily-species-source');
   const curiosityText = document.getElementById('daily-curiosity-text');
   const exploreBtn = document.getElementById('daily-explore-btn');
 
   if (!modal || !openBtn) return;
+
+  let currentSpecies = null;
+  let loading = false;
 
   openBtn.addEventListener('click', () => {
     modal.classList.remove('hidden');
@@ -457,16 +530,43 @@ export async function initDailyModule({ onExplore }) {
   modal.addEventListener('click', (e) => {
     if (e.target === modal) modal.classList.add('hidden');
   });
+  if (nextBtn) nextBtn.addEventListener('click', () => {
+    if (loading) return;
+    loadDaily(true);
+  });
 
-  async function loadDaily() {
-    const sp = getSpeciesOfDay();
-    const cur = getCuriosityOfDay();
+  async function loadDaily(forceSwap = false) {
+    if (loading) return;
+    loading = true;
+    if (nextBtn) nextBtn.disabled = true;
+
+    if (speciesName) speciesName.textContent = '…';
+    if (speciesImg) {
+      speciesImg.innerHTML = '<div style="width:100%;height:200px;display:flex;align-items:center;justify-content:center;background:#0d1526;border-radius:10px;color:#94a3b8;">⏳ Procurando espécie com informação completa…</div>';
+    }
+    if (speciesDesc) speciesDesc.textContent = 'Buscando espécie com descrição, imagem e linhagem…';
+    if (speciesLineage) speciesLineage.textContent = '…';
+    if (speciesDist) speciesDist.textContent = '…';
+    if (speciesSource) speciesSource.textContent = '';
+    if (curiosityText) curiosityText.textContent = getCuriosityOfDay();
+
+    const avoidName = (forceSwap && currentSpecies) ? currentSpecies.name : '';
+    const pick = await pickValid(getLocalPool, avoidName);
+    loading = false;
+    if (nextBtn) nextBtn.disabled = false;
+
+    if (!pick) {
+      if (speciesName) speciesName.textContent = 'Nenhuma espécie disponível no momento.';
+      if (speciesImg) speciesImg.innerHTML = '<div style="width:100%;height:200px;display:flex;align-items:center;justify-content:center;background:#0d1526;border-radius:10px;color:#94a3b8;">😕</div>';
+      if (speciesDesc) speciesDesc.textContent = 'Não foi possível encontrar um táxon com imagem, descrição e linhagem. Tente novamente mais tarde.';
+      return;
+    }
+
+    const sp = pick.sp;
+    const data = pick.data;
+    currentSpecies = sp;
 
     if (speciesName) speciesName.textContent = sp.name;
-    if (speciesImg) {
-      speciesImg.innerHTML = '<div style="width:100%;height:200px;display:flex;align-items:center;justify-content:center;background:#0d1526;border-radius:10px;color:#94a3b8;">⏳ Carregando imagem…</div>';
-    }
-    if (speciesDesc) speciesDesc.textContent = 'Buscando informações científicas…';
     if (speciesLineage) {
       speciesLineage.innerHTML = sp.lineage.map((l, i) => {
         const arrow = i > 0 ? '<span style="color:#2ecc71;margin:0 6px;">→</span>' : '';
@@ -474,7 +574,11 @@ export async function initDailyModule({ onExplore }) {
       }).join('');
     }
     if (speciesDist) speciesDist.textContent = sp.distribution || 'Distribuição não informada.';
-    if (curiosityText) curiosityText.textContent = cur;
+    if (speciesSource) {
+      speciesSource.textContent = sp.source === 'curada'
+        ? '📚 Espécie selecionada do catálogo de destaques'
+        : '🗂️ Táxon do banco de dados local';
+    }
 
     if (exploreBtn) {
       exploreBtn.onclick = () => {
@@ -483,23 +587,20 @@ export async function initDailyModule({ onExplore }) {
       };
     }
 
-    const data = await fetchWikiSummary(sp.wikiTitle || sp.name);
+    const img = data?.thumbnail?.source || data?.originalimage?.source || '';
     if (speciesImg) {
-      const img = data?.thumbnail?.source || data?.originalimage?.source;
       if (img) {
         speciesImg.innerHTML = `<img src="${escAttrUrl(img)}" alt="${escHtml(sp.name)}" style="width:100%;height:200px;object-fit:cover;border-radius:10px;" loading="lazy" onerror="this.style.display='none'"/>`;
       } else {
         speciesImg.innerHTML = '<div style="width:100%;height:200px;display:flex;align-items:center;justify-content:center;background:#0d1526;border-radius:10px;color:#94a3b8;">🖼️ Sem imagem disponível</div>';
       }
     }
-    if (speciesDesc && data?.extract) {
-      speciesDesc.textContent = data.extract;
-    } else if (speciesDesc) {
-      speciesDesc.textContent = 'Descrição científica não encontrada. Tente pesquisar na árvore.';
+    if (speciesDesc) {
+      speciesDesc.textContent = (data && data.extract) ? data.extract : 'Descrição científica não encontrada.';
     }
   }
 
-  // Pré-carrega ao abrir o site para mostrar o selo "hoje"
+  // Pré-carrega ao abrir o site
   loadDaily();
 }
 

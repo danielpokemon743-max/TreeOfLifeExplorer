@@ -3244,9 +3244,46 @@ document.addEventListener('DOMContentLoaded', () => {
     setInterval(triggerJumpSequence, 4100); // Repete no mesmo ritmo da luz diagonal
 
     initDailyModule({
-      onExplore: async (sp) => { await exploreDailySpecies(sp); }
+      onExplore: async (sp) => { await exploreDailySpecies(sp); },
+      getLocalPool: dailyLocalPool
     });
 });
+
+// Fornece os táxons carregados na árvore local para o "Espécie do Dia".
+// Filtra nomes biológicos e constrói a linhagem evolutiva de cada um.
+function dailyLocalPool() {
+  const out = [];
+  const seen = new Set();
+  const nodes = Array.isArray(window.allTreeNodes) ? window.allTreeNodes : [];
+  for (const n of nodes) {
+    if (!n || !n.name) continue;
+    if (n.rank === 'life') continue;
+    if (!isBiologicalName(n.name)) continue;
+    const key = normalizeStr(n.name);
+    if (seen.has(key)) continue;
+    seen.add(key);
+
+    const lineageNames = [];
+    const seenLineage = new Set();
+    let cur = n;
+    while (cur && cur.name) {
+      const lk = normalizeStr(cur.name);
+      if (!seenLineage.has(lk)) {
+        seenLineage.add(lk);
+        lineageNames.unshift(cur.name);
+      }
+      cur = cur.parent;
+    }
+    if (!lineageNames.includes(n.name)) lineageNames.push(n.name);
+
+    out.push({ name: n.name, lineage: lineageNames });
+    if (out.length >= 1500) break;
+  }
+  if (out.length < 10 && rootNode) {
+    out.push({ name: rootNode.name, lineage: [rootNode.name] });
+  }
+  return out;
+}
 
 // Navega até a espécie do dia. Se a espécie exata não estiver disponível
 // (não existe no banco local nem carrega da internet), navega até o ancestral
