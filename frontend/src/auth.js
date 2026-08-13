@@ -4,6 +4,7 @@ const API_BASE = '/api/auth';
 const PROGRESS_BASE = '/api/progress';
 const RANKING_BASE = '/api/ranking';
 const ADMIN_BASE = '/api/admin';
+const CHAT_BASE = '/api/chat';
 
 export function getAuthToken() {
   return localStorage.getItem('passkey_auth_token');
@@ -590,6 +591,39 @@ export async function adminUnbanIp(ip) {
     });
     const data = await res.json();
     return { ok: res.ok, detail: data.detail || '' };
+  } catch {
+    return { ok: false, detail: 'Erro de rede' };
+  }
+}
+
+/**
+ * 20. Admin: alertas de mensagens ofensivas bloqueadas no chat
+ */
+export async function fetchChatReports() {
+  const token = getAuthToken();
+  if (!token) return { reports: [], _ok: true };
+  try {
+    const res = await fetchWithTimeout(`${CHAT_BASE}/reports`, {
+      headers: { 'Authorization': `Bearer ${token}` },
+      cache: 'no-store'
+    });
+    if (!res.ok) return { reports: [], _ok: false };
+    return { ...(await res.json()), _ok: true };
+  } catch {
+    return { reports: [], _ok: false };
+  }
+}
+
+export async function resolveChatReport(reportId) {
+  const token = getAuthToken();
+  if (!token) return { ok: false };
+  try {
+    const res = await fetchWithTimeout(`${CHAT_BASE}/reports/resolve`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+      body: JSON.stringify({ report_id: reportId })
+    });
+    return { ok: res.ok, detail: '' };
   } catch {
     return { ok: false, detail: 'Erro de rede' };
   }

@@ -1,8 +1,19 @@
 import uuid
 from datetime import datetime
 from typing import List, Optional
-from sqlalchemy import String, Integer, DateTime, ForeignKey, LargeBinary, JSON, func
+
+from sqlalchemy import (
+    JSON,
+    DateTime,
+    Float,
+    ForeignKey,
+    Integer,
+    LargeBinary,
+    String,
+    func,
+)
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
+
 
 class Base(DeclarativeBase):
     pass
@@ -38,6 +49,9 @@ class User(Base):
     favorites: Mapped[List["Favorite"]] = relationship(back_populates="user", cascade="all, delete-orphan")
     discoveries: Mapped[List["Discovery"]] = relationship(back_populates="user", cascade="all, delete-orphan")
     settings: Mapped[Optional["UserSettings"]] = relationship(back_populates="user", uselist=False, cascade="all, delete-orphan")
+    chat_messages: Mapped[List["ChatMessage"]] = relationship(
+        back_populates="user", cascade="all, delete-orphan"
+    )
 
 
 class Passkey(Base):
@@ -45,7 +59,7 @@ class Passkey(Base):
 
     id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=uuid.uuid4)
     user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
-    
+
     # Identificador único da credencial (Base64URL)
     credential_id: Mapped[str] = mapped_column(String(512), unique=True, index=True, nullable=False)
     # Chave pública em formato bytes (COSE)
@@ -56,7 +70,7 @@ class Passkey(Base):
     transports: Mapped[list] = mapped_column(JSON, default=list)
     # Nome amigável do dispositivo (ex: "MacBook Pro", "iPhone 15")
     device_name: Mapped[str] = mapped_column(String(100), default="Dispositivo Desconhecido")
-    
+
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     last_used: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
 
@@ -119,3 +133,45 @@ class IpBan(Base):
     ip: Mapped[str] = mapped_column(String(64), unique=True, index=True, nullable=False)
     reason: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
     banned_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+# Mensagens do chat (global = todos; local = quem estiver geograficamente perto).
+class ChatMessage(Base):
+    __tablename__ = "chat_messages"
+
+    id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=uuid.uuid4)
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"), index=True
+    )
+    channel: Mapped[str] = mapped_column(String(10), default="global", index=True)
+    content: Mapped[str] = mapped_column(String(500), nullable=False)
+    # Dados de localização derivados do IP no momento do envio (usados no chat local).
+    ip: Mapped[str] = mapped_column(String(64), index=True)
+    country_code: Mapped[Optional[str]] = mapped_column(String(8), nullable=True)
+    country: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
+    region: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
+    latitude: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
+    longitude: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), index=True
+    )
+
+    user: Mapped[Optional["User"]] = relationship(back_populates="chat_messages")
+
+
+# Alerta para o admin quando uma mensagem ofensiva é bloqueada.
+class ChatReport(Base):
+    __tablename__ = "chat_reports"
+
+    id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=uuid.uuid4)
+    user_id: Mapped[Optional[uuid.UUID]] = mapped_column(
+        ForeignKey("users.id", ondelete="SET NULL"), nullable=True
+    )
+    content_attempted: Mapped[str] = mapped_column(String(500), nullable=False)
+    ip: Mapped[Optional[str]] = mapped_column(String(64), nullable=True)
+    resolved: Mapped[bool] = mapped_column(default=False, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )
+
+    user: Mapped[Optional["User"]] = relationship()

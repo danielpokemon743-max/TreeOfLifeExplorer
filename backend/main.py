@@ -9,6 +9,7 @@ sys.path.append(str(Path(__file__).resolve().parent.parent))
 from presentation.api import router as taxon_router
 from app.routers.auth import router as auth_router
 from app.routers.progress import router as progress_router
+from app.routers.chat import router as chat_router
 from app.database import init_db
 
 @asynccontextmanager
@@ -34,6 +35,7 @@ app.add_middleware(
 app.include_router(taxon_router)
 app.include_router(auth_router)
 app.include_router(progress_router)
+app.include_router(chat_router)
 
 @app.get("/")
 async def root() -> dict[str, str]:

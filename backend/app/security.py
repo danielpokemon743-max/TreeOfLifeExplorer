@@ -81,6 +81,13 @@ def nickname_is_inappropriate(nick: str) -> bool:
         return True
     return False
 
+def text_contains_bad_words(text: str) -> bool:
+    """True se o texto contém termos impróprios (mesma base do filtro de nicks).
+
+    Usado no chat para bloquear mensagens ofensivas antes do envio.
+    """
+    return nickname_is_inappropriate(text)
+
 def create_access_token(user_id: uuid.UUID) -> str:
     expire = datetime.now(timezone.utc) + timedelta(days=ACCESS_TOKEN_EXPIRE_DAYS)
     to_encode = {"sub": str(user_id), "exp": expire}

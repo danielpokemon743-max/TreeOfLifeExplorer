@@ -112,7 +112,8 @@ function initElementLighting() {
   document.querySelectorAll(
     '.ctrl-btn, #search-input, .action-btn, .ranking-sort-btn, .ranking-tab, ' +
     '.modal-content .close-btn, .btn-toggle-light, .light-toggle-btn, .collapse-btn, ' +
-    '#auth-modal input, #auth-modal select, #admin-ban-ip, #admin-ban-ip-reason'
+    '#auth-modal input, #auth-modal select, #admin-ban-ip, #admin-ban-ip-reason, ' +
+    '.chat-tab, .chat-send, #chat-input'
   ).forEach(applyLighting);
 }
 
@@ -137,7 +138,7 @@ function initTypeFX() {
 // SOM DE "PASSAR O MOUSE" NOS BOTÕES DE CONTROLE
 // ───────────────────────────────────────────────────────────────────────────
 function initHoverSound() {
-  document.querySelectorAll('.ctrl-btn, .action-btn, .ranking-sort-btn, .ranking-tab, .btn-toggle-light')
+  document.querySelectorAll('.ctrl-btn, .action-btn, .ranking-sort-btn, .ranking-tab, .btn-toggle-light, .chat-tab, .chat-send')
     .forEach(el => {
       el.addEventListener('mouseenter', () => sounds.playSFX('hover'));
     });

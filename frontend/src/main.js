@@ -3,6 +3,7 @@ import { TreeNode, TreeRenderer } from './TreeRenderer.js';
 import { sounds }                 from './SoundManager.js';
 import { initDailyModule }        from './daily.js';
 import { openModal, closeModal, applyLighting, initFX } from './fx.js';
+import { initChat, closeChat } from './chat.js';
 import { 
   registerPasskey, 
   loginPasskey, 
@@ -27,6 +28,8 @@ import {
   adminBanIp,
   fetchAdminIpBans,
   adminUnbanIp,
+  fetchChatReports,
+  resolveChatReport,
   detectMyIp,
   fetchCaptcha,
   COUNTRIES,
@@ -3711,6 +3714,45 @@ async function loadAdminPanel() {
       : `✔ ${users.length} usuário(s) · ${ip_bans.length} IP(s) banidos · seu IP: ${myIp || '—'}`;
   }
 
+  // ── Alertas de mensagens ofensivas bloqueadas no chat ──
+  const chatReportsList = document.getElementById('admin-chat-reports-list');
+  let reports = [];
+  try {
+    const rd = await fetchChatReports();
+    reports = (rd && rd.reports) || [];
+  } catch {
+    reports = [];
+  }
+  if (chatReportsList) {
+    chatReportsList.innerHTML = '';
+    if (!reports.length) {
+      chatReportsList.innerHTML = '<p style="color:#94a3b8; text-align:center; padding:14px;">Nenhum alerta de mensagem ofensiva.</p>';
+    } else {
+      reports.forEach(r => {
+        const div = document.createElement('div');
+        div.style.cssText = 'display:flex; align-items:center; gap:8px; padding:8px 10px; margin-bottom:6px; background:rgba(241,196,15,0.06); border:1px solid rgba(241,196,15,0.25); border-radius:8px; flex-wrap:wrap;';
+        div.innerHTML = `
+          <div style="flex:1; min-width:150px;">
+            <strong style="font-size:12px; color:#f1c40f;">${esc(r.nick || 'Usuário removido')}</strong>
+            <div style="font-size:12px; color:#eee; margin-top:2px;">“${esc(r.content)}”</div>
+            <div style="font-size:10px; color:#666; margin-top:2px;">IP: <code>${esc(r.ip || '—')}</code> · ${r.created_at ? new Date(r.created_at).toLocaleString('pt-BR') : '—'}</div>
+          </div>
+          ${r.resolved
+            ? '<span style="font-size:11px; color:#2ecc71;">✔ Resolvido</span>'
+            : `<button class="action-btn chat-resolve-btn" data-id="${escAttr(r.id)}" style="background:#f1c40f; color:#111; font-size:11px; padding:4px 10px;">Marcar resolvido</button>`}
+        `;
+        chatReportsList.appendChild(div);
+      });
+      chatReportsList.querySelectorAll('.chat-resolve-btn').forEach(btn => {
+        btn.addEventListener('click', async () => {
+          const res = await resolveChatReport(btn.dataset.id);
+          if (!res.ok) alert('Não foi possível marcar como resolvido.');
+          await loadAdminPanel();
+        });
+      });
+    }
+  }
+
   // Botão "usar meu IP" dentro da barra de banir IP
   fillBanIpWeaponry(myIp);
 
@@ -3972,6 +4014,7 @@ function closeAllMenus() {
   const dailyModal = document.getElementById('daily-modal');
   if (dailyModal) closeModal(dailyModal, null);
   if (statsPanel) closeModal(statsPanel, null);
+  closeChat(true);
   currentSelectedNode = null;
   closeAutocomplete();
 }
@@ -4058,3 +4101,4 @@ async function handleDevCheat() {
 
 // ─── EFEITOS VISUAIS: luz do ponteiro, iluminação dinâmica e sons ────────────
 initFX();
+initChat();
