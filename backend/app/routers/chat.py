@@ -268,6 +268,7 @@ async def list_reports(
     result = await db.execute(
         select(ChatReport)
         .options(selectinload(ChatReport.user))
+        .where(ChatReport.resolved == False)  # noqa: E712
         .order_by(ChatReport.created_at.desc())
         .limit(100)
     )

@@ -3730,6 +3730,7 @@ async function loadAdminPanel() {
     } else {
       reports.forEach(r => {
         const div = document.createElement('div');
+        div.className = 'chat-report-item';
         div.style.cssText = 'display:flex; align-items:center; gap:8px; padding:8px 10px; margin-bottom:6px; background:rgba(241,196,15,0.06); border:1px solid rgba(241,196,15,0.25); border-radius:8px; flex-wrap:wrap;';
         div.innerHTML = `
           <div style="flex:1; min-width:150px;">
@@ -3737,16 +3738,21 @@ async function loadAdminPanel() {
             <div style="font-size:12px; color:#eee; margin-top:2px;">“${esc(r.content)}”</div>
             <div style="font-size:10px; color:#666; margin-top:2px;">IP: <code>${esc(r.ip || '—')}</code> · ${r.created_at ? new Date(r.created_at).toLocaleString('pt-BR') : '—'}</div>
           </div>
-          ${r.resolved
-            ? '<span style="font-size:11px; color:#2ecc71;">✔ Resolvido</span>'
-            : `<button class="action-btn chat-resolve-btn" data-id="${escAttr(r.id)}" style="background:#f1c40f; color:#111; font-size:11px; padding:4px 10px;">Marcar resolvido</button>`}
+          <button class="action-btn chat-resolve-btn" data-id="${escAttr(r.id)}" style="background:#f1c40f; color:#111; font-size:11px; padding:4px 10px;">Marcar resolvido</button>
         `;
         chatReportsList.appendChild(div);
       });
       chatReportsList.querySelectorAll('.chat-resolve-btn').forEach(btn => {
         btn.addEventListener('click', async () => {
           const res = await resolveChatReport(btn.dataset.id);
-          if (!res.ok) alert('Não foi possível marcar como resolvido.');
+          if (!res.ok) {
+            alert('Não foi possível marcar como resolvido.');
+            return;
+          }
+          btn.closest('.chat-report-item')?.remove();
+          if (!chatReportsList.children.length) {
+            chatReportsList.innerHTML = '<p style="color:#94a3b8; text-align:center; padding:14px;">Nenhum alerta de mensagem ofensiva.</p>';
+          }
           await loadAdminPanel();
         });
       });
