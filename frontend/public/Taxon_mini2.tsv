@@ -3798,3 +3798,39 @@ taxonID	datasetID	parentNameUsageID	acceptedNameUsageID	originalNameUsageID	scie
 11178389	a97f36e5-ded1-49cc-bdec-ac6170fc7b9c	10798973			MVZB01						order			accepted			Bacteria	Sumerlaeota	Sumerlaeia	MVZB01		
 10825052	a97f36e5-ded1-49cc-bdec-ac6170fc7b9c	10798973			SLMS01						order			accepted			Bacteria	Sumerlaeota	Sumerlaeia	SLMS01		
 10758011	a97f36e5-ded1-49cc-bdec-ac6170fc7b9c	10798973			UBA8349						order			accepted			Bacteria	Sumerlaeota	Sumerlaeia	UBA8349		
+dz-reptilia	d7dddbf4-2cf0-4f39-9b2a-bb099caae36c	44			Reptilia		Reptilia				class			accepted			Animalia	Chordata	Reptilia			
+dz-diapsida	d7dddbf4-2cf0-4f39-9b2a-bb099caae36c	dz-reptilia			Diapsida		Diapsida				subclass			accepted			Animalia	Chordata	Reptilia			
+dz-archosauria	d7dddbf4-2cf0-4f39-9b2a-bb099caae36c	dz-diapsida			Archosauria		Archosauria				superorder			accepted			Animalia	Chordata	Reptilia			
+dz-dinosauria	d7dddbf4-2cf0-4f39-9b2a-bb099caae36c	dz-archosauria			Dinosauria		Dinosauria				clade			accepted			Animalia	Chordata	Reptilia			
+dz-saurischia	d7dddbf4-2cf0-4f39-9b2a-bb099caae36c	dz-dinosauria			Saurischia		Saurischia				clade			accepted			Animalia	Chordata	Reptilia			
+dz-theropoda	d7dddbf4-2cf0-4f39-9b2a-bb099caae36c	dz-saurischia			Theropoda		Theropoda				order			accepted			Animalia	Chordata	Reptilia			
+dz-tetanurae	d7dddbf4-2cf0-4f39-9b2a-bb099caae36c	dz-theropoda			Tetanurae		Tetanurae				suborder			accepted			Animalia	Chordata	Reptilia			
+dz-tyrannosauridae	d7dddbf4-2cf0-4f39-9b2a-bb099caae36c	dz-tetanurae			Tyrannosauridae		Tyrannosauridae				family			accepted			Animalia	Chordata	Reptilia		Tyrannosauridae	
+dz-tyrannosaurus	d7dddbf4-2cf0-4f39-9b2a-bb099caae36c	dz-tyrannosauridae			Tyrannosaurus		Tyrannosaurus	Tyrannosaurus			genus			accepted			Animalia	Chordata	Reptilia		Tyrannosauridae	Tyrannosaurus
+dz-trex	d7dddbf4-2cf0-4f39-9b2a-bb099caae36c	dz-tyrannosaurus			Tyrannosaurus rex	(Osborn, 1905)	Tyrannosaurus rex	Tyrannosaurus	rex		species			accepted			Animalia	Chordata	Reptilia		Tyrannosauridae	Tyrannosaurus
+dz-dromaeosauridae	d7dddbf4-2cf0-4f39-9b2a-bb099caae36c	dz-tetanurae			Dromaeosauridae		Dromaeosauridae				family			accepted			Animalia	Chordata	Reptilia		Dromaeosauridae	
+dz-velociraptor	d7dddbf4-2cf0-4f39-9b2a-bb099caae36c	dz-dromaeosauridae			Velociraptor		Velociraptor	Velociraptor			genus			accepted			Animalia	Chordata	Reptilia		Dromaeosauridae	Velociraptor
+dz-velociraptor-m	d7dddbf4-2cf0-4f39-9b2a-bb099caae36c	dz-velociraptor			Velociraptor mongoliensis	Osborn, 1924	Velociraptor mongoliensis	Velociraptor	mongoliensis		species			accepted			Animalia	Chordata	Reptilia		Dromaeosauridae	Velociraptor
+dz-sauropodomorpha	d7dddbf4-2cf0-4f39-9b2a-bb099caae36c	dz-saurischia			Sauropodomorpha		Sauropodomorpha				suborder			accepted			Animalia	Chordata	Reptilia			
+dz-sauropoda	d7dddbf4-2cf0-4f39-9b2a-bb099caae36c	dz-sauropodomorpha			Sauropoda		Sauropoda				infraorder			accepted			Animalia	Chordata	Reptilia			
+dz-brachiosauridae	d7dddbf4-2cf0-4f39-9b2a-bb099caae36c	dz-sauropoda			Brachiosauridae		Brachiosauridae				family			accepted			Animalia	Chordata	Reptilia		Brachiosauridae	
+dz-brachiosaurus	d7dddbf4-2cf0-4f39-9b2a-bb099caae36c	dz-brachiosauridae			Brachiosaurus		Brachiosaurus	Brachiosaurus			genus			accepted			Animalia	Chordata	Reptilia		Brachiosauridae	Brachiosaurus
+dz-brachiosaurus-a	d7dddbf4-2cf0-4f39-9b2a-bb099caae36c	dz-brachiosaurus			Brachiosaurus altithorax	Riggs, 1903	Brachiosaurus altithorax	Brachiosaurus	altithorax		species			accepted			Animalia	Chordata	Reptilia		Brachiosauridae	Brachiosaurus
+dz-diplodocidae	d7dddbf4-2cf0-4f39-9b2a-bb099caae36c	dz-sauropoda			Diplodocidae		Diplodocidae				family			accepted			Animalia	Chordata	Reptilia		Diplodocidae	
+dz-diplodocus	d7dddbf4-2cf0-4f39-9b2a-bb099caae36c	dz-diplodocidae			Diplodocus		Diplodocus	Diplodocus			genus			accepted			Animalia	Chordata	Reptilia		Diplodocidae	Diplodocus
+dz-diplodocus-c	d7dddbf4-2cf0-4f39-9b2a-bb099caae36c	dz-diplodocus			Diplodocus carnegii	Hatcher, 1901	Diplodocus carnegii	Diplodocus	carnegii		species			accepted			Animalia	Chordata	Reptilia		Diplodocidae	Diplodocus
+dz-ornithischia	d7dddbf4-2cf0-4f39-9b2a-bb099caae36c	dz-dinosauria			Ornithischia		Ornithischia				clade			accepted			Animalia	Chordata	Reptilia			
+dz-thyreophora	d7dddbf4-2cf0-4f39-9b2a-bb099caae36c	dz-ornithischia			Thyreophora		Thyreophora				clade			accepted			Animalia	Chordata	Reptilia			
+dz-stegosauridae	d7dddbf4-2cf0-4f39-9b2a-bb099caae36c	dz-thyreophora			Stegosauridae		Stegosauridae				family			accepted			Animalia	Chordata	Reptilia		Stegosauridae	
+dz-stegosaurus	d7dddbf4-2cf0-4f39-9b2a-bb099caae36c	dz-stegosauridae			Stegosaurus		Stegosaurus	Stegosaurus			genus			accepted			Animalia	Chordata	Reptilia		Stegosauridae	Stegosaurus
+dz-stegosaurus-s	d7dddbf4-2cf0-4f39-9b2a-bb099caae36c	dz-stegosaurus			Stegosaurus stenops	Marsh, 1887	Stegosaurus stenops	Stegosaurus	stenops		species			accepted			Animalia	Chordata	Reptilia		Stegosauridae	Stegosaurus
+dz-ankylosauridae	d7dddbf4-2cf0-4f39-9b2a-bb099caae36c	dz-thyreophora			Ankylosauridae		Ankylosauridae				family			accepted			Animalia	Chordata	Reptilia		Ankylosauridae	
+dz-ankylosaurus	d7dddbf4-2cf0-4f39-9b2a-bb099caae36c	dz-ankylosauridae			Ankylosaurus		Ankylosaurus	Ankylosaurus			genus			accepted			Animalia	Chordata	Reptilia		Ankylosauridae	Ankylosaurus
+dz-ankylosaurus-m	d7dddbf4-2cf0-4f39-9b2a-bb099caae36c	dz-ankylosaurus			Ankylosaurus magniventris	Brown, 1908	Ankylosaurus magniventris	Ankylosaurus	magniventris		species			accepted			Animalia	Chordata	Reptilia		Ankylosauridae	Ankylosaurus
+dz-ornithopoda	d7dddbf4-2cf0-4f39-9b2a-bb099caae36c	dz-ornithischia			Ornithopoda		Ornithopoda				clade			accepted			Animalia	Chordata	Reptilia			
+dz-hadrosauridae	d7dddbf4-2cf0-4f39-9b2a-bb099caae36c	dz-ornithopoda			Hadrosauridae		Hadrosauridae				family			accepted			Animalia	Chordata	Reptilia		Hadrosauridae	
+dz-edmontosaurus	d7dddbf4-2cf0-4f39-9b2a-bb099caae36c	dz-hadrosauridae			Edmontosaurus		Edmontosaurus	Edmontosaurus			genus			accepted			Animalia	Chordata	Reptilia		Hadrosauridae	Edmontosaurus
+dz-edmontosaurus-a	d7dddbf4-2cf0-4f39-9b2a-bb099caae36c	dz-edmontosaurus			Edmontosaurus annectens	(Marsh, 1892)	Edmontosaurus annectens	Edmontosaurus	annectens		species			accepted			Animalia	Chordata	Reptilia		Hadrosauridae	Edmontosaurus
+dz-ceratopsidae	d7dddbf4-2cf0-4f39-9b2a-bb099caae36c	dz-ornithopoda			Ceratopsidae		Ceratopsidae				family			accepted			Animalia	Chordata	Reptilia		Ceratopsidae	
+dz-triceratops	d7dddbf4-2cf0-4f39-9b2a-bb099caae36c	dz-ceratopsidae			Triceratops		Triceratops	Triceratops			genus			accepted			Animalia	Chordata	Reptilia		Ceratopsidae	Triceratops
+dz-triceratops-h	d7dddbf4-2cf0-4f39-9b2a-bb099caae36c	dz-triceratops			Triceratops horridus	(Marsh, 1889)	Triceratops horridus	Triceratops	horridus		species			accepted			Animalia	Chordata	Reptilia		Ceratopsidae	Triceratops
