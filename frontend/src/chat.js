@@ -137,15 +137,17 @@ function renderMessages(data) {
 
   p.list.innerHTML = messages.map(m => {
     const mine = m.is_mine ? ' mine' : '';
+    const rankClass = m.top_rank ? ` rank-${m.top_rank}` : '';
+    const medal = m.top_rank ? { 1: '🥇', 2: '🥈', 3: '🥉' }[m.top_rank] : '';
     const adminBadge = m.is_admin_user ? '<span class="chat-admin-badge" title="Administrador">🛡</span>' : '';
     const flag = esc(m.flag || '');
     const nick = esc(m.nick || 'Sem nick');
     const ipAttr = m.ip ? ` data-ip="${esc(m.ip)}"` : '';
     return (
-      '<div class="chat-msg' + mine + '" data-uid="' + esc(m.user_id) + '"' + ipAttr + '>' +
+      '<div class="chat-msg' + mine + rankClass + '" data-uid="' + esc(m.user_id) + '"' + ipAttr + '>' +
         '<div class="chat-msg-hdr">' +
           '<span class="chat-avatar">' + esc((m.nick || '?')[0] || '?') + '</span>' +
-          '<span class="chat-nick">' + flag + ' ' + nick + adminBadge + '</span>' +
+          '<span class="chat-nick">' + flag + ' ' + nick + '<span class="chat-medal" title="Top ' + m.top_rank + ' do ranking">' + medal + '</span>' + adminBadge + '</span>' +
           '<span class="chat-meta">Lv ' + esc(m.level) + ' · ' + esc(fmtHours(m.hours)) + '</span>' +
         '</div>' +
         '<div class="chat-bubble">' + esc(m.content) + '</div>' +

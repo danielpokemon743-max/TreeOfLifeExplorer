@@ -59,7 +59,24 @@ async def _optional_user_id(
     return verify_token(credentials.credentials)
 
 
-def _serialize(msg: ChatMessage, user: User | None, include_ip: bool = False) -> dict:
+async def _top_users(db: AsyncSession) -> dict[uuid.UUID, int]:
+    """Os 3 primeiros do ranking global (por XP, ignorando banidos).
+
+    Retorna user_id -> posição (1, 2 ou 3).
+    """
+    banned_ips = set((await db.execute(select(IpBan.ip))).scalars().all())
+    result = await db.execute(select(User).where(User.is_banned == False))  # noqa: E712
+    users = [u for u in result.scalars().all() if (u.last_ip or None) not in banned_ips]
+    users.sort(key=lambda u: u.xp or 0, reverse=True)
+    return {u.id: i + 1 for i, u in enumerate(users[:3])}
+
+
+def _serialize(
+    msg: ChatMessage,
+    user: User | None,
+    include_ip: bool = False,
+    top_rank: int | None = None,
+) -> dict:
     level = 1
     hours = 0.0
     if user is not None:
@@ -78,6 +95,7 @@ def _serialize(msg: ChatMessage, user: User | None, include_ip: bool = False) ->
         "created_at": msg.created_at.isoformat() if msg.created_at else None,
         "is_mine": False,
         "is_admin_user": bool(user and is_admin_user(user)),
+        "top_rank": top_rank,  # 1, 2 ou 3 quando o autor está no topo do ranking global
     }
     if include_ip:
         out["ip"] = msg.ip or ""
@@ -163,8 +181,10 @@ async def get_messages(
     # ordem cronológica para exibição (do mais antigo ao mais novo)
     rows = list(reversed(rows))
 
+    top_users = await _top_users(db)
+
     messages = [
-        _serialize(m, m.user, include_ip=include_ip)
+        _serialize(m, m.user, include_ip=include_ip, top_rank=top_users.get(m.user_id))
         for m in rows
         if m.user_id not in banned_acc
     ]

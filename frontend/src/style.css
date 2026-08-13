@@ -1558,3 +1558,61 @@ html { --lx: 50%; --ly: 35%; --lc: 0.5; --lr: 255; --lg: 255; --lb: 255; }
   cursor: pointer;
 }
 .chat-context-menu button:hover { background: rgba(231, 76, 60, 0.18); }
+
+/* ── Destaque dos 3 primeiros do ranking no chat ──────────────────────────── */
+.chat-msg.rank-1 .chat-avatar {
+  background: linear-gradient(135deg, #f1c40f, #b8860b);
+  box-shadow: 0 0 10px rgba(241, 196, 15, 0.8);
+}
+.chat-msg.rank-1 .chat-nick {
+  color: #f1c40f;
+  text-shadow: 0 0 8px rgba(241, 196, 15, 0.6);
+}
+.chat-msg.rank-1 .chat-bubble {
+  border-color: rgba(241, 196, 15, 0.65);
+  background: rgba(241, 196, 15, 0.12);
+  animation: fxChatGold 2.2s ease-in-out infinite;
+}
+
+.chat-msg.rank-2 .chat-avatar {
+  background: linear-gradient(135deg, #c0c8d2, #8f9aa6);
+  box-shadow: 0 0 10px rgba(192, 200, 210, 0.8);
+}
+.chat-msg.rank-2 .chat-nick {
+  color: #d6dde6;
+  text-shadow: 0 0 8px rgba(192, 200, 210, 0.5);
+}
+.chat-msg.rank-2 .chat-bubble {
+  border-color: rgba(192, 200, 210, 0.6);
+  background: rgba(192, 200, 210, 0.1);
+  animation: fxChatSilver 2.4s ease-in-out infinite;
+}
+
+.chat-msg.rank-3 .chat-avatar {
+  background: linear-gradient(135deg, #cd7f32, #8b5a2b);
+  box-shadow: 0 0 10px rgba(205, 127, 50, 0.8);
+}
+.chat-msg.rank-3 .chat-nick {
+  color: #e0915a;
+  text-shadow: 0 0 8px rgba(205, 127, 50, 0.5);
+}
+.chat-msg.rank-3 .chat-bubble {
+  border-color: rgba(205, 127, 50, 0.6);
+  background: rgba(205, 127, 50, 0.1);
+  animation: fxChatBronze 2.6s ease-in-out infinite;
+}
+
+.chat-medal { margin-left: 2px; font-size: 12px; }
+
+@keyframes fxChatGold {
+  0%, 100% { box-shadow: 0 0 6px rgba(241, 196, 15, 0.25); }
+  50%      { box-shadow: 0 0 16px rgba(241, 196, 15, 0.65); }
+}
+@keyframes fxChatSilver {
+  0%, 100% { box-shadow: 0 0 6px rgba(192, 200, 210, 0.20); }
+  50%      { box-shadow: 0 0 14px rgba(192, 200, 210, 0.55); }
+}
+@keyframes fxChatBronze {
+  0%, 100% { box-shadow: 0 0 6px rgba(205, 127, 50, 0.20); }
+  50%      { box-shadow: 0 0 14px rgba(205, 127, 50, 0.55); }
+}
