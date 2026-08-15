@@ -6,7 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func as sa_func
 
 from app.database import get_db
-from app.models import User, IpBan, Achievement, Discovery
+from app.models import User, IpBan, Achievement, Discovery, SiteView
 from app.security import get_current_user_id
 from app.routers.auth import is_admin_user, client_ip
 from app.routers.progress import level_from_xp
@@ -213,3 +213,29 @@ async def unban_ip(
         await db.commit()
         return {"status": "unbanned", "ip": ip}
     return {"status": "not_found", "ip": ip}
+
+
+@router.get("/views")
+async def site_views_stats(
+    current_user_id: uuid.UUID = Depends(get_current_user_id),
+    db: AsyncSession = Depends(get_db),
+):
+    """Estatísticas de visualizações do site (apenas IPs únicos).
+
+    Cada IP aparece uma única vez (primeira visita); o total é a quantidade
+    de endereços diferentes que já acessaram o site.
+    """
+    await _require_admin(db, current_user_id)
+
+    total = await db.scalar(select(sa_func.count()).select_from(SiteView))
+    result = await db.execute(
+        select(SiteView).order_by(SiteView.first_seen.desc()).limit(200)
+    )
+    views = [
+        {
+            "ip": v.ip,
+            "first_seen": v.first_seen.isoformat() if v.first_seen else None,
+        }
+        for v in result.scalars().all()
+    ]
+    return {"total": total or 0, "views": views}

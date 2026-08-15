@@ -512,6 +512,24 @@ export async function fetchAdminUsers() {
 }
 
 /**
+ * 17b. Admin: estatísticas de visualizações do site (IPs únicos)
+ */
+export async function fetchSiteViews() {
+  const token = getAuthToken();
+  if (!token) return { total: 0, views: [], _ok: true };
+  try {
+    const res = await fetchWithTimeout(`${ADMIN_BASE}/views`, {
+      headers: { 'Authorization': `Bearer ${token}` },
+      cache: 'no-store'
+    });
+    if (!res.ok) return { total: 0, views: [], _ok: false };
+    return { ...(await res.json()), _ok: true };
+  } catch {
+    return { total: 0, views: [], _ok: false };
+  }
+}
+
+/**
  * 18. Admin: banir / desbanir conta
  */
 export async function adminBanAccount(userId) {

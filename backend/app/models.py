@@ -135,6 +135,17 @@ class IpBan(Base):
     banned_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
 
+# Visualizações únicas do site: um registro por IP (só a primeira visita conta).
+class SiteView(Base):
+    __tablename__ = "site_views"
+
+    id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=uuid.uuid4)
+    ip: Mapped[str] = mapped_column(String(64), unique=True, index=True, nullable=False)
+    first_seen: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )
+
+
 # Mensagens do chat (global = todos; local = quem estiver geograficamente perto).
 class ChatMessage(Base):
     __tablename__ = "chat_messages"

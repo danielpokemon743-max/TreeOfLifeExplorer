@@ -6,7 +6,7 @@ from fastapi.staticfiles import StaticFiles
 from starlette.middleware.base import BaseHTTPMiddleware
 from app.database import init_db
 from app.config import settings
-from app.routers import auth, progress, admin, ranking, chat
+from app.routers import auth, progress, admin, ranking, chat, views
 
 # Evita que navegadores guardem index.html em cache (asset antigo viraria 404 após deploy)
 class NoCacheHtmlMiddleware(BaseHTTPMiddleware):
@@ -38,6 +38,7 @@ app.include_router(progress.router)
 app.include_router(admin.router)
 app.include_router(ranking.router)
 app.include_router(chat.router)
+app.include_router(views.router)
 
 @app.get("/api/health")
 async def health():

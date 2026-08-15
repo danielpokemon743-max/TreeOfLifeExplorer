@@ -22,6 +22,7 @@ import {
   fetchRanking,
   fetchAdminCheck,
   fetchMyIp,
+  fetchSiteViews,
   fetchAdminUsers,
   adminBanAccount,
   adminUnbanAccount,
@@ -1555,6 +1556,15 @@ window._nodeById = new Map();
 }
  
 initTree();
+
+// Registra a visita do site (o backend conta apenas a 1ª visita de cada IP).
+let _viewRecorded = false;
+function recordSiteView() {
+  if (_viewRecorded) return;
+  _viewRecorded = true;
+  fetch('/api/views/record', { method: 'POST', cache: 'no-store' }).catch(() => {});
+}
+recordSiteView();
 
 // Aplica o fundo persistido (ou o melhor disponível) ao carregar
 ensureBackground();
@@ -3629,15 +3639,18 @@ async function loadAdminPanel() {
   let users = [];
   let ip_bans = [];
   let myIp = '';
+  let viewStats = { total: 0, views: [], _ok: true };
   let errors = [];
   try {
-    const [ru, rb, rm] = await Promise.all([fetchAdminUsers(), fetchAdminIpBans(), fetchMyIp()]);
+    const [ru, rb, rm, rv] = await Promise.all([fetchAdminUsers(), fetchAdminIpBans(), fetchMyIp(), fetchSiteViews()]);
     users = ru.users || [];
     ip_bans = rb.ip_bans || [];
     myIp = rm.ip || '';
+    viewStats = rv || { total: 0, views: [], _ok: true };
     if (ru._ok === false) errors.push('lista de usuários (403/erro — confira ADMIN_NICKS no servidor)');
     if (rb._ok === false) errors.push('lista de IPs');
     if (rm && rm._ok === false) errors.push('seu IP');
+    if (rv && rv._ok === false) errors.push('visualizações');
   } catch (e) {
     if (adminUsersList) adminUsersList.innerHTML = '<p style="color:#e74c3c; text-align:center; padding:20px;">Erro ao carregar. Verifique sua conexão e tente novamente apertando em 🛡️ Admin.</p>';
     if (adminIpBansList) adminIpBansList.innerHTML = '<li style="color:#e74c3c; padding:8px;">Erro ao carregar.</li>';
@@ -3650,6 +3663,28 @@ async function loadAdminPanel() {
     adminMsg.textContent = errors.length
       ? `⚠ Sem resposta parcial de: ${errors.join(', ')}`
       : `✔ ${users.length} usuário(s) · ${ip_bans.length} IP(s) banidos · seu IP: ${myIp || '—'}`;
+  }
+
+  // ── Visualizações do site (IPs únicos) ──
+  const viewsTotalEl = document.getElementById('admin-views-total');
+  const viewsListEl = document.getElementById('admin-views-list');
+  if (viewsTotalEl) viewsTotalEl.textContent = Number(viewStats.total || 0).toLocaleString('pt-BR');
+  if (viewsListEl) {
+    viewsListEl.innerHTML = '';
+    const views = viewStats.views || [];
+    if (!views.length) {
+      viewsListEl.innerHTML = '<p style="color:#94a3b8; text-align:center; padding:14px;">Nenhuma visualização registrada ainda.</p>';
+    } else {
+      views.forEach((v, i) => {
+        const div = document.createElement('div');
+        div.style.cssText = 'display:flex; align-items:center; justify-content:space-between; gap:8px; padding:6px 8px; background:rgba(46,204,113,0.06); border-radius:6px; margin-bottom:6px; font-size:12px;';
+        div.innerHTML = `
+          <span>${i + 1}. <code style="color:#2ecc71;">${esc(v.ip)}</code></span>
+          <span style="color:#888; font-size:11px;">${v.first_seen ? new Date(v.first_seen).toLocaleString('pt-BR') : '—'}</span>
+        `;
+        viewsListEl.appendChild(div);
+      });
+    }
   }
 
   // ── Alertas de mensagens ofensivas bloqueadas no chat ──
