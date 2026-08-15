@@ -1557,12 +1557,31 @@ window._nodeById = new Map();
  
 initTree();
 
-// Registra a visita do site (o backend conta apenas a 1ª visita de cada IP).
+// Registra a visita do site: o backend conta apenas a 1ª visita de cada
+// dispositivo (id persistente do navegador), então trocar de IP/VPN não duplica.
 let _viewRecorded = false;
+function _deviceId() {
+  const KEY = 'tol_device_id';
+  let id = localStorage.getItem(KEY);
+  if (!id) {
+    id = (typeof crypto !== 'undefined' && crypto.randomUUID)
+      ? crypto.randomUUID()
+      : 'dev_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 10);
+    try { localStorage.setItem(KEY, id); } catch { /* armazenamento bloqueado */ }
+  }
+  return id;
+}
 function recordSiteView() {
   if (_viewRecorded) return;
   _viewRecorded = true;
-  fetch('/api/views/record', { method: 'POST', cache: 'no-store' }).catch(() => {});
+  const deviceId = _deviceId();
+  if (!deviceId) return;
+  fetch('/api/views/record', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ device_id: deviceId }),
+    cache: 'no-store'
+  }).catch(() => {});
 }
 recordSiteView();
 
@@ -3678,8 +3697,11 @@ async function loadAdminPanel() {
       views.forEach((v, i) => {
         const div = document.createElement('div');
         div.style.cssText = 'display:flex; align-items:center; justify-content:space-between; gap:8px; padding:6px 8px; background:rgba(46,204,113,0.06); border-radius:6px; margin-bottom:6px; font-size:12px;';
+        const dev = v.device_id && v.device_id.startsWith('dev_')
+          ? v.device_id
+          : (v.device_id ? `${v.device_id.slice(0, 8)}…` : '—');
         div.innerHTML = `
-          <span>${i + 1}. <code style="color:#2ecc71;">${esc(v.ip)}</code></span>
+          <span>${i + 1}. <code style="color:#2ecc71;">${esc(dev)}</code>${v.first_ip ? ` <span style="color:#888; font-size:11px;">· ${esc(v.first_ip)}</span>` : ''}</span>
           <span style="color:#888; font-size:11px;">${v.first_seen ? new Date(v.first_seen).toLocaleString('pt-BR') : '—'}</span>
         `;
         viewsListEl.appendChild(div);

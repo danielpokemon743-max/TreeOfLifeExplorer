@@ -1,4 +1,5 @@
 from fastapi import APIRouter, Depends, Request
+from pydantic import BaseModel
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -10,26 +11,38 @@ from app.routers.auth import client_ip
 router = APIRouter(prefix="/api/views", tags=["Views"])
 
 
-@router.post("/record")
-async def record_view(request: Request, db: AsyncSession = Depends(get_db)):
-    """Registra a primeira visita de um IP (visualizações únicas).
+class RecordViewRequest(BaseModel):
+    # Id persistente do dispositivo, gerado uma vez pelo navegador do cliente.
+    device_id: str = ""
 
-    Um IP só conta uma vez: chamadas repetidas do mesmo endereço não
-    incrementam a contagem (as estatísticas mostram IPs distintos).
+
+@router.post("/record")
+async def record_view(
+    body: RecordViewRequest,
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+):
+    """Registra a primeira visita de um dispositivo (visualizações únicas).
+
+    Um mesmo dispositivo (device_id) só conta uma vez, mesmo mudando de IP;
+    o IP de origem fica apenas como referência informativa.
     """
-    ip = client_ip(request)
-    if not ip or ip == "unknown":
+    device_id = (body.device_id or "").strip()
+    if not device_id or len(device_id) > 64:
         return {"recorded": False, "is_new": False}
 
-    existing = await db.execute(select(SiteView.id).where(SiteView.ip == ip))
+    existing = await db.execute(
+        select(SiteView.id).where(SiteView.device_id == device_id)
+    )
     if existing.scalar_one_or_none() is not None:
         return {"recorded": False, "is_new": False}
 
+    ip = client_ip(request)
     try:
-        db.add(SiteView(ip=ip))
+        db.add(SiteView(device_id=device_id, first_ip=ip or None))
         await db.commit()
     except IntegrityError:
-        # Corrida de duas requisições simultâneas do mesmo IP: a outra venceu.
+        # Corrida de duas requisições simultâneas do mesmo dispositivo: a outra venceu.
         await db.rollback()
         return {"recorded": False, "is_new": False}
 

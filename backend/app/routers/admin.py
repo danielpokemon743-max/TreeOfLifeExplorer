@@ -220,10 +220,11 @@ async def site_views_stats(
     current_user_id: uuid.UUID = Depends(get_current_user_id),
     db: AsyncSession = Depends(get_db),
 ):
-    """Estatísticas de visualizações do site (apenas IPs únicos).
+    """Estatísticas de visualizações do site (apenas dispositivos únicos).
 
-    Cada IP aparece uma única vez (primeira visita); o total é a quantidade
-    de endereços diferentes que já acessaram o site.
+    Cada dispositivo (device_id persistente do navegador) aparece uma única
+    vez (primeira visita); o total é a quantidade de dispositivos diferentes
+    que já acessaram o site.
     """
     await _require_admin(db, current_user_id)
 
@@ -233,7 +234,8 @@ async def site_views_stats(
     )
     views = [
         {
-            "ip": v.ip,
+            "device_id": v.device_id,
+            "first_ip": v.first_ip or "",
             "first_seen": v.first_seen.isoformat() if v.first_seen else None,
         }
         for v in result.scalars().all()
