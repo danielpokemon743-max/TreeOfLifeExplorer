@@ -36,7 +36,7 @@ BANNED_WORDS_SUBSTRING = [
     "viado", "bixa", "pederasta", "escroto", "idiota", "macaco", "negrada",
     "crioulo", "nazista", "hitler", "nazi", "20comer70correr", "carai", "tung", "sahur",
     # Composições
-    "filhodaputa", "filha da puta", "fdp", "ku klux", "kllux", "kkk",
+    "filhodaputa", "filha da puta", "fdp", "ku klux", "kllux",
     "vai tomar no cu", "vtnc", "ptnc", "pqp", "tnc", "sequestr", "sequestro",
     "trafica", "genocida", "pedofil", "pedofilo", "estuprad", "estuprador",
     "suicid", "suicida", "six seven",

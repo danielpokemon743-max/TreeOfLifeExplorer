@@ -559,7 +559,7 @@ export async function adminBanIp(ip, reason = '') {
       body: JSON.stringify({ ip, reason })
     });
     const data = await res.json();
-    return { ok: res.ok, detail: data.detail || '' };
+    return { ok: res.ok, detail: data.detail || '', accounts_banned: data.accounts_banned || [] };
   } catch {
     return { ok: false, detail: 'Erro de rede' };
   }

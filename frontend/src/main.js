@@ -176,7 +176,7 @@ const BANNED_NICKWORDS = [
   'piroca','buceta','xota','arrombado','arrombada','viado','bixa','pederasta',
   'escroto','idiota','macaco','negrada','crioulo','nazista','hitler','nazi',
   '20comer70correr','carai','tung','sahur',
-  'filhodaputa','filha da puta','fdp','ku klux','kllux','kkk','vai tomar no cu',
+  'filhodaputa','filha da puta','fdp','ku klux','kllux','vai tomar no cu',
   'vtnc','ptnc','pqp','tnc','sequestr','sequestro','trafica','genocida','pedofil','pedofilo','estuprad','estuprador','suicid','suicida',
   'six seven',
   'fuck','fucking','shit','bitch','dick','cock','pussy','asshole','nigger',
@@ -1964,7 +1964,6 @@ async function showTaxonInfo(node) {
     removeNodeAndDescendants(node);
     closeModal(infoPanel, 'close');
     currentSelectedNode = null;
-    updateBioFilterUI();
     if (renderer) {
       if (typeof renderer._recomputeLayout === 'function') renderer._recomputeLayout();
       if (typeof renderer._requestRender === 'function') renderer._requestRender();
@@ -2803,26 +2802,6 @@ function updateStats() {
     const pct = Math.min(100, (count / 2500) * 100);
     statsBar.style.width = `${pct}%`;
   }
-
-  const issues = window._taxonIssues || [];
-  const el = document.getElementById('validation-issues');
-  const countEl = document.getElementById('validation-count');
-  const detailEl = document.getElementById('validation-detail');
-  if (el && countEl && detailEl) {
-    if (issues.length > 0) {
-      el.style.display = 'block';
-      countEl.textContent = issues.length;
-      const byType = {};
-      for (const iss of issues) {
-        byType[iss.type] = (byType[iss.type] || 0) + 1;
-      }
-      detailEl.innerHTML = Object.entries(byType)
-        .map(([t, c]) => `<span style="margin-right:12px;">${esc(t)}: ${Number(c)}</span>`)
-        .join('');
-    } else {
-      el.style.display = 'none';
-    }
-  }
 }
 setInterval(updateStats, 1000);
  
@@ -3160,50 +3139,9 @@ if (btnCollapse) {
   else if (mobileByDefault) setBarCollapsed(true);
 }
 
-const btnValidateLineage = document.getElementById('btn-validate-lineage');
-const btnTestValidator = document.getElementById('btn-test-validator');
-if (btnValidateLineage) btnValidateLineage.addEventListener('click', () => {
-  document.getElementById('lineage-progress').textContent = '🔬 Validando linhagens…';
-  validateTreeLineage().then(r => {
-    document.getElementById('lineage-progress').textContent = `✅ ${r.checked} verificados, ${r.correct} corretos, ${r.corrected.length} corrigidos, ${r.manual.length} manuais`;
-  });
-});
-if (btnTestValidator) btnTestValidator.addEventListener('click', () => {
-  document.getElementById('lineage-progress').textContent = '🧪 Executando testes…';
-  runValidationTests().then(r => {
-    document.getElementById('lineage-progress').textContent = `🧪 ${r.passed} passaram, ${r.failed} falharam`;
-    if (r.failed > 0) console.error('Falhas:', r.errors);
-  });
-});
-
-const btnBioFilter = document.getElementById('btn-bio-filter');
-const bioFilterInfo = document.getElementById('bio-filter-info');
-function updateBioFilterUI() {
-  if (!btnBioFilter) return;
-  const on = window._bioFilterEnabled;
-  btnBioFilter.textContent = on ? '🌿 Filtro Biológico: ON' : '🌿 Filtro Biológico: OFF';
-  btnBioFilter.style.background = on ? 'rgba(46, 204, 113, 0.25)' : 'rgba(231, 76, 60, 0.25)';
-  btnBioFilter.style.borderColor = on ? 'rgba(46, 204, 113, 0.5)' : 'rgba(231, 76, 60, 0.5)';
-  if (bioFilterInfo) {
-    bioFilterInfo.textContent = on
-      ? `${window._bioFilterCount || 0} nome(s)/descrição(ões) não-biológico(s) removido(s)`
-      : 'Todos os nomes do TSV foram carregados (filtro desligado)';
-  }
-}
-if (btnBioFilter) btnBioFilter.addEventListener('click', () => {
-  window._bioFilterEnabled = !window._bioFilterEnabled;
-  updateBioFilterUI();
-  if (window._bioFilterEnabled) {
-    pruneNonBiological();
-    if (renderer) {
-      if (typeof renderer._recomputeLayout === 'function') renderer._recomputeLayout();
-      if (typeof renderer._requestRender === 'function') renderer._requestRender();
-    }
-  } else {
-    initTree(true);
-  }
-});
-updateBioFilterUI();
+// O Filtro Biológico fica SEMPRE ativo (window._bioFilterEnabled = true), sem
+// botão de alternância na aba de estatísticas. Ele roda no load do TSV, na
+// expansão de filhos externos e na remoção por descrição não-biológica.
  
 if (closeInfoBtn) {
   closeInfoBtn.addEventListener('click', () => {
@@ -3858,7 +3796,11 @@ function fillBanIpWeaponry(myIp) {
       if (!confirm(`Banir seu IP atual (${myIp})? Você não poderá mais criar conta ou logar deste acesso.`)) return;
       (async () => {
         const res = await adminBanIp(myIp, 'Banido pelo admin');
-        if (!res.ok && res.detail) alert(res.detail);
+        if (res.accounts_banned && res.accounts_banned.length) {
+          alert(`IP banido. ${res.accounts_banned.length} conta(s) associada(s) também foram banidas (proteção contra VPN): ${res.accounts_banned.map(a => a.display_name).join(', ')}`);
+        } else if (!res.ok && res.detail) {
+          alert(res.detail);
+        }
         await loadAdminPanel();
       })();
     };
@@ -3893,7 +3835,11 @@ if (btnAdminBanIp) {
     const reason = (adminBanIpReason ? adminBanIpReason.value.trim() : '');
     if (!ip) return alert('Informe um endereço de IP para banir.');
     const res = await adminBanIp(ip, reason);
-    if (!res.ok && res.detail) alert(res.detail);
+    if (res.accounts_banned && res.accounts_banned.length) {
+      alert(`IP banido. ${res.accounts_banned.length} conta(s) associada(s) também foram banidas (proteção contra VPN): ${res.accounts_banned.map(a => a.display_name).join(', ')}`);
+    } else if (!res.ok && res.detail) {
+      alert(res.detail);
+    }
     if (adminBanIpInput) adminBanIpInput.value = '';
     if (adminBanIpReason) adminBanIpReason.value = '';
     await loadAdminPanel();

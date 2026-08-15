@@ -141,7 +141,11 @@ async def ban_ip(
     current_user_id: uuid.UUID = Depends(get_current_user_id),
     db: AsyncSession = Depends(get_db),
 ):
-    """Bane um IP: ele não poderá criar conta nem logar, mas ainda usa o site anônimo."""
+    """Bane um IP: ele não poderá criar conta nem logar, mas ainda usa o site anônimo.
+
+    Para não ser burlado por VPN, as contas que usaram esse IP também são banidas
+    (trocar de IP/VPN não devolve a conta a um usuário banido).
+    """
     await _require_admin(db, current_user_id)
 
     ip = (body.ip or "").strip()
@@ -149,12 +153,26 @@ async def ban_ip(
         raise HTTPException(status_code=400, detail="Informe um IP.")
 
     existing = await db.execute(select(IpBan).where(IpBan.ip == ip))
-    if existing.scalar_one_or_none():
-        return {"status": "already_banned"}
+    already = existing.scalar_one_or_none() is not None
+    if not already:
+        db.add(IpBan(ip=ip, reason=(body.reason or "").strip()[:255] or None))
 
-    db.add(IpBan(ip=ip, reason=(body.reason or "").strip()[:255] or None))
+    # Bane também as contas registradas com esse IP (impede burlar via VPN).
+    result = await db.execute(select(User).where(User.last_ip == ip))
+    accounts = result.scalars().all()
+    banned_accounts = []
+    for user in accounts:
+        if user.is_banned or is_admin_user(user):
+            continue
+        user.is_banned = True
+        banned_accounts.append({"id": str(user.id), "display_name": user.display_name})
+
     await db.commit()
-    return {"status": "banned", "ip": ip}
+    return {
+        "status": "already_banned" if already else "banned",
+        "ip": ip,
+        "accounts_banned": banned_accounts,
+    }
 
 @router.get("/ip-bans")
 async def list_ip_bans(
