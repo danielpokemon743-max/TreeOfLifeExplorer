@@ -2280,6 +2280,42 @@ const NON_BIO_DESC_WORDS = [
   'aparelho eletrônico', 'aparelho eletronico', 'instrumento musical', 'carro'
 ];
 
+// ─── FILTRO DE IMAGEM (filtro biológico sobre a fonte da imagem) ─────────────
+// Marcadores de ALTA confiança para textos curtos (descrições do Wikidata e
+// didascálias de arquivos do Commons). Só palavras "fortes" — nada genérico
+// como "king"/"rei"/"isla", que podem aparecer em nomes comuns de organismos.
+const NON_BIO_SHORT_WORDS = [
+  // pt
+  'cidade', 'pais', 'pessoa', 'livro', 'monstro', 'aviao', 'sentimento',
+  'crenca', 'linguagem', 'profissao', 'marca', 'musica', 'cancao', 'fobia',
+  'medo', 'doenca', 'sindrome', 'transtorno', 'conceito', 'divindade',
+  'personagem', 'mitologica', 'mitologico', 'lenda', 'ficcao', 'ficticio',
+  'ficticia', 'deus', 'deusa', 'anjo', 'demonio', 'espirito', 'fantasma',
+  'dragao', 'unicornio', 'quimera', 'centauro', 'zumbi', 'vampiro',
+  'lobisomem', 'sereia', 'ciclope', 'fenix', 'bruxa', 'feiticeiro', 'mago',
+  'obra', 'filme',
+  // en
+  'city', 'country', 'person', 'book', 'monster', 'aircraft', 'profession',
+  'brand', 'music', 'film', 'movie', 'phobia', 'fear', 'disease', 'syndrome',
+  'disorder', 'concept', 'deity', 'character', 'fictional', 'legendary',
+  'mythical', 'mythological', 'legend', 'creature', 'angel', 'demon', 'ghost',
+  'spirit', 'dragon', 'unicorn', 'chimera', 'centaur', 'zombie', 'vampire',
+  'werewolf', 'mermaid', 'cyclops', 'phoenix', 'witch', 'wizard', 'sorcerer',
+  'god', 'goddess', 'supernatural', 'magic'
+];
+
+function shortTextIsNonBiological(text) {
+  if (!text) return false;
+  const norm = normalizeStr(text);
+  if (!norm) return false;
+  const tokens = new Set(norm.split(/[^a-z0-9]+/).filter(Boolean));
+  return NON_BIO_SHORT_WORDS.some(w => tokens.has(w));
+}
+
+const _wdImageCache = new Map();
+const _commonsBioCache = new Map();
+setInterval(() => { _wdImageCache.clear(); _commonsBioCache.clear(); }, 300000);
+
 // ─── WIKIPEDIA SEARCH WITH LINEAGE VALIDATION ────────────────────────────────
 const _wikiCache = new Map();
 setInterval(() => { _wikiCache.clear(); }, 300000);
@@ -2339,12 +2375,31 @@ async function fetchBestWikipedia(nodeOrName, lang = 'pt') {
 }
 
 // ─── COMMONS IMAGE ───────────────────────────────────────────────────────────
+async function commonsFileIsNonBiological(fileTitle) {
+  if (!fileTitle) return false;
+  if (_commonsBioCache.has(fileTitle)) return _commonsBioCache.get(fileTitle);
+  let verdict = false;
+  try {
+    const res = await fetch(`https://commons.wikimedia.org/w/api.php?action=query&titles=${encodeURIComponent(fileTitle)}&prop=imageinfo&iiprop=extmetadata&format=json&origin=*`);
+    if (res.ok) {
+      const d = await res.json();
+      const meta = Object.values(d.query?.pages || {})[0]?.imageinfo?.[0]?.extmetadata || {};
+      const desc = (meta.ImageDescription?.value || '').replace(/<[^>]*>/g, ' ');
+      verdict = shortTextIsNonBiological(desc) || isNonBiologicalExtract(desc);
+    }
+  } catch (e) {}
+  _commonsBioCache.set(fileTitle, verdict);
+  return verdict;
+}
+
 async function queryCommonsImage(query) {
   try {
-    const res = await fetch(`https://commons.wikimedia.org/w/api.php?action=query&list=search&srsearch=${encodeURIComponent(query)}&format=json&srlimit=3&origin=*`);
+    const res = await fetch(`https://commons.wikimedia.org/w/api.php?action=query&list=search&srsearch=${encodeURIComponent(query)}&format=json&srlimit=5&origin=*`);
     if (!res.ok) return null;
     const d = await res.json();
     for (const page of (d.query?.search || [])) {
+      // Filtro biológico: pula arquivos cuja didascália indica conteúdo não-biológico.
+      if (await commonsFileIsNonBiological(page.title)) continue;
       const imgRes = await fetch(`https://commons.wikimedia.org/w/api.php?action=query&titles=${encodeURIComponent(page.title)}&prop=pageimages&format=json&pithumbsize=300&origin=*`);
       if (imgRes.ok) {
         const imgData = await imgRes.json();
@@ -2371,23 +2426,43 @@ async function queryGBIFMediaByKey(usageKey) {
 
 // ─── WIKIDATA IMAGE ─────────────────────────────────────────────────────────
 async function queryWikidataImage(qid) {
-  try {
-    const res = await fetch(`https://www.wikidata.org/wiki/Special:EntityData/${qid}.json`);
-    if (!res.ok) return null;
-    const data = await res.json();
-    const entity = data.entities?.[qid];
-    if (!entity) return null;
-    const claims = entity.claims || {};
-    const imageClaim = claims.P18?.[0]?.mainsnak?.datavalue?.value;
-    if (!imageClaim) return null;
-    const fileName = imageClaim.replace(/ /g, '_');
-    const imgRes = await fetch(`https://commons.wikimedia.org/w/api.php?action=query&titles=File:${encodeURIComponent(fileName)}&prop=imageinfo&iiprop=url&format=json&origin=*`);
-    if (!imgRes.ok) return null;
-    const imgData = await imgRes.json();
-    const pages = imgData.query?.pages || {};
-    const info = Object.values(pages)[0]?.imageinfo?.[0];
-    return info?.url || null;
-  } catch (e) { return null; }
+  if (_wdImageCache.has(qid)) return _wdImageCache.get(qid);
+  const value = await (async () => {
+    try {
+      const res = await fetch(`https://www.wikidata.org/wiki/Special:EntityData/${qid}.json`);
+      if (!res.ok) return null;
+      const data = await res.json();
+      const entity = data.entities?.[qid];
+      if (!entity) return null;
+
+      // Filtro biológico: descrição curta do Wikidata (ex.: "fictional character").
+      const descs = [entity.descriptions?.pt?.value, entity.descriptions?.en?.value];
+      if (descs.some(d => shortTextIsNonBiological(d))) return null;
+
+      // Filtro biológico: artigo ligado (pt/en) com definição não-biológica.
+      for (const word of ['pt', 'en']) {
+        const title = entity.sitelinks?.[`${word}wiki`]?.title;
+        if (!title) continue;
+        const sum = await fetchWikipediaSummary(title, word);
+        if (sum?.extract && !isDisambiguationPage(sum)) {
+          if (isNonBiologicalExtract(sum.extract)) return null;
+        }
+      }
+
+      const claims = entity.claims || {};
+      const imageClaim = claims.P18?.[0]?.mainsnak?.datavalue?.value;
+      if (!imageClaim) return null;
+      const fileName = imageClaim.replace(/ /g, '_');
+      const imgRes = await fetch(`https://commons.wikimedia.org/w/api.php?action=query&titles=File:${encodeURIComponent(fileName)}&prop=imageinfo&iiprop=url&format=json&origin=*`);
+      if (!imgRes.ok) return null;
+      const imgData = await imgRes.json();
+      const pages = imgData.query?.pages || {};
+      const info = Object.values(pages)[0]?.imageinfo?.[0];
+      return info?.url || null;
+    } catch (e) { return null; }
+  })();
+  _wdImageCache.set(qid, value);
+  return value;
 }
 
 // ─── QUERY GBIF WITH FULL LINEAGE ───────────────────────────────────────────
