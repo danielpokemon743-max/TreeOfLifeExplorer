@@ -176,10 +176,39 @@ body {
   font-family: 'Outfit', sans-serif;
   font-weight: 700;
   font-size: 1.2rem;
-  background: linear-gradient(120deg, #fff 30%, var(--purple));
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
+  position: relative;
+  display: inline-flex;
+  align-items: center;
   white-space: nowrap;
+  background: linear-gradient(120deg, #ffffff 5%, #fff0a0 30%, #b06ef0 55%, #4af08c 85%);
+  background-size: 220% 220%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  color: #ffffff;
+  animation: logo-rainbow-sweep 10s ease-in-out infinite;
+}
+
+.logo span {
+  display: inline-block;
+  position: relative;
+  will-change: transform;
+  animation-duration: 0.5s;
+  animation-timing-function: ease;
+  animation-fill-mode: both;
+  animation-iteration-count: 1;
+}
+
+.logo span.jump { animation-name: letter-jump; }
+
+@keyframes letter-jump {
+  0%, 100% { transform: translateY(0); }
+  30% { transform: translateY(-6px); }
+}
+
+@keyframes logo-rainbow-sweep {
+  0% { background-position: 120% 50%; }
+  50%, 100% { background-position: -80% 50%; }
 }
 
 .search-wrap { flex: 1; max-width: 340px; }
@@ -391,82 +420,6 @@ body {
 
 
 
-/* Estilo base do container do logo */
-.logo {
-  font-weight: 700;
-  font-size: 18px;
-  position: relative;
-  display: inline-flex; /* Usa flex para alinhar os spans lado a lado */
-  align-items: center;
-  color: #ffffff; /* Cor inicial branca */
-}
-
-/* Estilo padrão para cada letra (span) */
-.logo span {
-  display: inline-block;
-  position: relative;
-  transition: color 0.3s ease; /* Suaviza a mudança de cor */
-  
-  /* Prepara a animação de pulo (iniciada pela classe .jump) */
-  animation-duration: 1.0s;
-  animation-timing-function: ease;
-  animation-fill-mode: both;
-  animation-iteration-count: 1;
-}
-
-/* Pseudo-elemento que cria a linha diagonal arco-íris (idêntico ao anterior) */
-.logo::after {
-  content: "🌿 Tree of Life"; /* Deve conter o texto completo */
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  pointer-events: none; /* Evita que a camada superior interfira no clique */
-  
-  /* Gradiente do arco-íris */
-  background: linear-gradient(135deg, 
-    #ff3333 0%, 
-    #ff9933 20%, 
-    #ffff33 40%, 
-    #33cc33 60%, 
-    #3399ff 80%, 
-    #9933ff 100%
-  );
-  
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  
-  /* Máscara da linha diagonal */
-  -webkit-mask-image: linear-gradient(
-    135deg, 
-    transparent 0%, 
-    transparent 40%, 
-    rgba(0, 0, 0, 1) 50%, 
-    transparent 60%, 
-    transparent 100%
-  );
-  -webkit-mask-size: 300% 300%;
-  
-  /* Animação da linha diagonal (aumentei para 4s para dar tempo de ler e depois pular) */
-  animation: diagonal-light-sweep 10s ease-in-out infinite;
-}
-
-/* Animação da linha diagonal passando */
-@keyframes diagonal-light-sweep {
-  0% { -webkit-mask-position: 150% 150%; }
-  50%, 100% { -webkit-mask-position: -50% -50%; }
-}
-
-/* --- Animação de Pulo (adicionada via JS) --- */
-.logo span.jump {
-  animation-name: letter-jump;
-}
-
-@keyframes letter-jump {
-  0%, 100% { transform: translateY(0); }
-  30% { transform: translateY(-6px); } /* Altura do pulo */
-}
 /* ── Stats Panel (esquerda) ──────────────────────────────────────────────── */
 .stats-panel {
   position: fixed;
