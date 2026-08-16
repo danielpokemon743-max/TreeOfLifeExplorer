@@ -3212,7 +3212,14 @@ if (sfxSlider) {
 if (btnZoomIn) btnZoomIn.addEventListener('click', () => renderer?.zoomBy?.(1.25));
 if (btnZoomOut) btnZoomOut.addEventListener('click', () => renderer?.zoomBy?.(0.8));
 if (btnReset) btnReset.addEventListener('click', () => rootNode && renderer?.focusOnNode?.(rootNode, 1.0));
-if (btnSources && statsPanel) btnSources.addEventListener('click', () => statsPanel.classList.toggle('hidden'));
+if (btnSources && statsPanel) {
+  const btnCloseStats = document.getElementById('close-stats');
+  btnSources.addEventListener('click', () => {
+    if (statsPanel.classList.contains('hidden')) openModal(statsPanel, 'open');
+    else closeModal(statsPanel, 'close');
+  });
+  if (btnCloseStats) btnCloseStats.addEventListener('click', () => closeModal(statsPanel, 'close'));
+}
 if (btnHelp && helpModal) btnHelp.addEventListener('click', () => openModal(helpModal));
 if (closeHelpBtn && helpModal) closeHelpBtn.addEventListener('click', () => closeModal(helpModal));
 

@@ -1,5 +1,6 @@
 // 💬 chat.js - Chat global e local da comunidade
 import { sounds } from './SoundManager.js';
+import { openModal, closeModal } from './fx.js';
 import { fetchAdminCheck, getAuthToken, adminBanAccount, adminBanIp } from './auth.js';
 
 const CHAT_BASE = '/api/chat';
@@ -49,17 +50,15 @@ export function closeChat(silent = false) {
   _open = false;
   stopPoll();
   const p = parts();
-  if (p.panel) p.panel.classList.add('hidden');
+  if (p.panel) closeModal(p.panel, silent ? null : 'close');
   hideContextMenu();
-  if (!silent) sounds.playSFX('close');
 }
 
 function openChat() {
   _open = true;
   const p = parts();
   if (!p.panel) return;
-  p.panel.classList.remove('hidden');
-  sounds.playSFX('open');
+  openModal(p.panel, 'open');
   loadMessages();
   startPoll();
   if (p.input) setTimeout(() => p.input.focus(), 60);
