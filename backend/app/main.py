@@ -17,6 +17,43 @@ class NoCacheHtmlMiddleware(BaseHTTPMiddleware):
             response.headers["Cache-Control"] = "no-store, no-cache, must-revalidate, max-age=0"
         return response
 
+
+# Headers de segurança e Content-Security-Policy.
+# O frontend foi ajustado para não usar scripts inline, então o CSP pode ser
+# estrito em script-src (apenas 'self' + o CDN do PixiJS).
+class SecurityHeadersMiddleware(BaseHTTPMiddleware):
+    async def dispatch(self, request, call_next):
+        response = await call_next(request)
+        response.headers["X-Content-Type-Options"] = "nosniff"
+        response.headers["X-Frame-Options"] = "DENY"
+        response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+        response.headers["Permissions-Policy"] = (
+            "geolocation=(), microphone=(), camera=(), payment=(), usb=(), gyroscope=(), accelerometer=()"
+        )
+        if settings.PRODUCTION:
+            response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains; preload"
+
+        csp = (
+            "default-src 'self'; "
+            "script-src 'self' https://pixijs.download; "
+            "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; "
+            "font-src 'self' https://fonts.gstatic.com; "
+            "img-src 'self' data: blob: https:; "
+            "media-src 'self' data: blob: https:; "
+            "connect-src 'self' "
+            "https://api.opentreeoflife.org https://*.wikipedia.org "
+            "https://www.wikidata.org https://commons.wikimedia.org "
+            "https://api.gbif.org https://api.inaturalist.org https://www.inaturalist.org "
+            "https://api.checklistbank.org https://eutils.ncbi.nlm.nih.gov; "
+            "object-src 'none'; "
+            "base-uri 'self'; "
+            "form-action 'self'; "
+            "frame-ancestors 'none'; "
+            "upgrade-insecure-requests"
+        )
+        response.headers["Content-Security-Policy"] = csp
+        return response
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     await init_db()
@@ -32,6 +69,7 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+app.add_middleware(SecurityHeadersMiddleware)
 
 app.include_router(auth.router)
 app.include_router(progress.router)

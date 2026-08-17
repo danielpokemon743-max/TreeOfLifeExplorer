@@ -1,4 +1,6 @@
 # config.py
+import warnings
+
 from pydantic_settings import BaseSettings
 
 class Settings(BaseSettings):
@@ -54,4 +56,27 @@ class Settings(BaseSettings):
         env_file = ".env"
         extra = "ignore"
 
+
 settings = Settings()
+
+# Flag segura = env informada e diferente do default do código-fonte.
+# Um JWT_SECRET conhecido publicamente permite forjar tokens (inclusive de admin).
+_INSECURE_JWT_SECRET = "SEU_SECRET_SUPER_SEGURO_AQUI_32_BYTES"
+
+
+def _jwt_secret_is_safe() -> bool:
+    return bool(settings.JWT_SECRET) and settings.JWT_SECRET != _INSECURE_JWT_SECRET
+
+
+if settings.PRODUCTION and not _jwt_secret_is_safe():
+    raise RuntimeError(
+        "PRODUCTION=True exige um JWT_SECRET seguro. Defina a variável de ambiente "
+        "JWT_SECRET (ex.: `openssl rand -hex 32`) antes de subir em produção."
+    )
+if not _jwt_secret_is_safe():
+    warnings.warn(
+        "AVISO: usando o JWT_SECRET padrão (inseguro). Defina a variável de ambiente "
+        "JWT_SECRET antes de publicar o site.",
+        RuntimeWarning,
+        stacklevel=2,
+    )

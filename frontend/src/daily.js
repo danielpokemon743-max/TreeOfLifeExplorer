@@ -604,7 +604,9 @@ export async function initDailyModule({ onExplore, getLocalPool }) {
     const img = data?.thumbnail?.source || data?.originalimage?.source || '';
     if (speciesImg) {
       if (img) {
-        speciesImg.innerHTML = `<img src="${escAttrUrl(img)}" alt="${escHtml(sp.name)}" style="width:100%;height:200px;object-fit:cover;border-radius:10px;" loading="lazy" onerror="this.style.display='none'"/>`;
+        speciesImg.innerHTML = `<img src="${escAttrUrl(img)}" alt="${escHtml(sp.name)}" style="width:100%;height:200px;object-fit:cover;border-radius:10px;" loading="lazy"/>`;
+        const imgEl = speciesImg.querySelector('img');
+        if (imgEl) imgEl.addEventListener('error', () => { imgEl.style.display = 'none'; });
       } else {
         speciesImg.innerHTML = '<div style="width:100%;height:200px;display:flex;align-items:center;justify-content:center;background:#0d1526;border-radius:10px;color:#94a3b8;">🖼️ Sem imagem disponível</div>';
       }

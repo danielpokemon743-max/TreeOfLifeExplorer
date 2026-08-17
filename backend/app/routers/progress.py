@@ -206,9 +206,13 @@ async def add_discovery(
     current_user_id: uuid.UUID = Depends(get_current_user_id),
     db: AsyncSession = Depends(get_db)
 ):
+    species_id = (body.species_id or "").strip()
+    if not species_id or len(species_id) > 100:
+        raise HTTPException(status_code=400, detail="species_id inválido.")
+
     stmt = select(Discovery).where(
         Discovery.user_id == current_user_id,
-        Discovery.species_id == body.species_id
+        Discovery.species_id == species_id
     )
     existing = await db.execute(stmt)
     if existing.scalar_one_or_none():
@@ -216,7 +220,7 @@ async def add_discovery(
         return {"status": "already_exists", "new_achievements": new_achs}
 
     kingdom = (body.kingdom or "").strip().lower()
-    discovery = Discovery(user_id=current_user_id, species_id=body.species_id, kingdom=kingdom or None)
+    discovery = Discovery(user_id=current_user_id, species_id=species_id, kingdom=kingdom or None)
     db.add(discovery)
     await db.commit()
 
@@ -229,6 +233,10 @@ async def add_discovery(
         "level": xp_res,
     }
 
+# Limite por chamada do batch: alto o bastante para importações legítimas,
+# baixo o bastante para impedir despejo arbitrário de descobertas/XP.
+BATCH_DISCOVERIES_MAX = 1000
+
 @router.post("/discoveries/batch")
 async def add_discoveries_batch(
     body: dict,
@@ -236,8 +244,27 @@ async def add_discoveries_batch(
     db: AsyncSession = Depends(get_db)
 ):
     species_ids = body.get("species_ids", [])
-    new_count = 0
+    if not isinstance(species_ids, list):
+        raise HTTPException(status_code=400, detail="species_ids deve ser uma lista.")
+    if len(species_ids) > BATCH_DISCOVERIES_MAX:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Limite de {BATCH_DISCOVERIES_MAX} descobertas por chamada.",
+        )
+    # Normaliza: só strings não vazias, sem duplicatas e dentro do tamanho da coluna.
+    seen = set()
+    clean_ids = []
     for sid in species_ids:
+        if not isinstance(sid, str):
+            continue
+        sid = sid.strip()
+        if not sid or len(sid) > 100 or sid in seen:
+            continue
+        seen.add(sid)
+        clean_ids.append(sid)
+
+    new_count = 0
+    for sid in clean_ids:
         stmt = select(Discovery).where(
             Discovery.user_id == current_user_id,
             Discovery.species_id == sid
@@ -264,15 +291,20 @@ async def add_favorite(
     current_user_id: uuid.UUID = Depends(get_current_user_id),
     db: AsyncSession = Depends(get_db)
 ):
+    item_type = (body.item_type or "").strip()
+    item_id = (body.item_id or "").strip()
+    if not item_type or len(item_type) > 50 or not item_id or len(item_id) > 100:
+        raise HTTPException(status_code=400, detail="item_type/item_id inválidos.")
+
     stmt = select(Favorite).where(
         Favorite.user_id == current_user_id,
-        Favorite.item_id == body.item_id
+        Favorite.item_id == item_id
     )
     existing = await db.execute(stmt)
     if existing.scalar_one_or_none():
         return {"status": "already_exists"}
 
-    fav = Favorite(user_id=current_user_id, item_type=body.item_type, item_id=body.item_id)
+    fav = Favorite(user_id=current_user_id, item_type=item_type, item_id=item_id)
     db.add(fav)
     await db.commit()
 
@@ -376,6 +408,11 @@ async def get_discoveries_count(
 class SessionTimeRequest(BaseModel):
     seconds: int = 0
 
+# Teto por requisição: o frontend envia o acumulado a cada 30s (e o resto no
+# `beforeunload`). 1 hora é mais que suficiente para qualquer cliente legítimo
+# e impede inflar o tempo/conquistas com valores arbitrários.
+MAX_SESSION_TIME_PER_REQUEST = 3600
+
 @router.post("/session-time")
 async def add_session_time(
     body: SessionTimeRequest,
@@ -383,7 +420,7 @@ async def add_session_time(
     db: AsyncSession = Depends(get_db)
 ):
     """Acumula o tempo ativo no site (segundos) e re-checa conquistas de tempo."""
-    seconds = max(0, int(body.seconds or 0))
+    seconds = max(0, min(MAX_SESSION_TIME_PER_REQUEST, int(body.seconds or 0)))
     if seconds == 0:
         return {"status": "noop", "total_seconds": None, "new_achievements": []}
 
@@ -420,7 +457,7 @@ async def dev_level_up(
     if not user:
         return {"status": "error", "level": None, "xp": None}
 
-    levels = max(0, int(body.levels or 0))
+    levels = max(0, min(200, int(body.levels or 0)))
     if levels == 0:
         return {"status": "noop", "level": level_from_xp(user.xp or 0), "xp": user.xp or 0}
 
