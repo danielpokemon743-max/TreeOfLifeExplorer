@@ -7,9 +7,11 @@ const WIKI     = 'https://en.wikipedia.org/api/rest_v1/page/summary';
 
 const _cache = new Map();
 
-// Flags que devem ser ignoradas (táxons duvidosos ou extintos)
+// Flags que devem ser ignoradas (apenas táxons duvidosos, não os extintos:
+// espécies extintas como Homo neanderthalensis são parte legítima da árvore
+// da vida e estavam sendo ocultadas).
 const BAD_FLAGS = new Set([
-  'extinct', 'dubious', 'hidden', 'incertae_sedis_inherited',
+  'dubious', 'hidden', 'incertae_sedis_inherited',
   'unplaced', 'environmental', 'not_otu',
 ]);
 
