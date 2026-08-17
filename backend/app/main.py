@@ -6,7 +6,7 @@ from fastapi.staticfiles import StaticFiles
 from starlette.middleware.base import BaseHTTPMiddleware
 from app.database import init_db
 from app.config import settings
-from app.routers import auth, progress, admin, ranking, chat, views
+from app.routers import auth, progress, admin, ranking, chat, views, external
 
 # Evita que navegadores guardem index.html em cache (asset antigo viraria 404 após deploy)
 class NoCacheHtmlMiddleware(BaseHTTPMiddleware):
@@ -45,7 +45,7 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
             "https://api.opentreeoflife.org https://*.wikipedia.org "
             "https://www.wikidata.org https://commons.wikimedia.org "
             "https://api.gbif.org https://api.inaturalist.org https://www.inaturalist.org "
-            "https://api.checklistbank.org https://eutils.ncbi.nlm.nih.gov; "
+            "https://api.checklistbank.org; "
             "object-src 'none'; "
             "base-uri 'self'; "
             "form-action 'self'; "
@@ -77,6 +77,7 @@ app.include_router(admin.router)
 app.include_router(ranking.router)
 app.include_router(chat.router)
 app.include_router(views.router)
+app.include_router(external.router)
 
 @app.get("/api/health")
 async def health():

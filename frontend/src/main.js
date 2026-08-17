@@ -2718,13 +2718,13 @@ async function resolveOccurrenceData(node) {
 async function resolveGeneticInfo(node) {
   try {
     const term = `${encodeURIComponent(node.name)}[Scientific Name]`;
-    const esRes = await fetch(`https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi?db=taxonomy&term=${term}&retmode=json`);
+    const esRes = await fetch(`/api/external/ncbi/esearch?db=taxonomy&term=${term}&retmode=json`);
     if (!esRes.ok) return null;
     const es = await esRes.json();
     const id = es?.esearchresult?.idlist?.[0];
     if (!id) return null;
 
-    const sumRes = await fetch(`https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esummary.fcgi?db=taxonomy&id=${id}&retmode=json`);
+    const sumRes = await fetch(`/api/external/ncbi/esummary?db=taxonomy&id=${id}&retmode=json`);
     if (!sumRes.ok) return null;
     const sum = await sumRes.json();
     const info = sum?.result?.[id];
