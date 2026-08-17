@@ -20,7 +20,8 @@ class NoCacheHtmlMiddleware(BaseHTTPMiddleware):
 
 # Headers de segurança e Content-Security-Policy.
 # O frontend foi ajustado para não usar scripts inline, então o CSP pode ser
-# estrito em script-src (apenas 'self' + o CDN do PixiJS).
+# estrito em script-src. 'unsafe-eval' é necessário: o bundle do PixiJS v7 usa
+# new Function internamente no systemCheck (sem isso o PIXI recusa inicializar).
 class SecurityHeadersMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request, call_next):
         response = await call_next(request)
@@ -35,7 +36,7 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
 
         csp = (
             "default-src 'self'; "
-            "script-src 'self'; "
+            "script-src 'self' 'unsafe-eval'; "
             "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; "
             "font-src 'self' https://fonts.gstatic.com; "
             "img-src 'self' data: blob: https:; "
