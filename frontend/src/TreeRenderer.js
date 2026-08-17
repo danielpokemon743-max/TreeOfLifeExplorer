@@ -322,22 +322,41 @@ export class TreeRenderer {
  
   async expandNode(node) {
     if (node.loading) return;
- 
+
+    // Nó marcado como expandido mas cujos filhos são só a cadeia COL parcial
+    // (criados pela busca, sem ott_id). Em vez de colapsar, carrega do OpenTree.
+    const hasRealChildren = node.children.some(c => c.ott_id);
+
     if (node.expanded) {
+      if (node._source === 'api' && !hasRealChildren) {
+        await this._loadChildren(node, true);
+        if (node.children.length > 0) {
+          node.expanded = true;
+          this._recomputeLayout();
+          this._requestRender();
+        }
+        return;
+      }
       node.expanded = false;
       this._recomputeLayout();
       this._requestRender();
       return;
     }
  
-    await this._loadChildren(node);
+    // Nós criados pela busca externa (COL) têm _source='api' e seus filhos
+    // vêm apenas da cadeia de classificação (parciais). Ao expandir, força a
+    // busca real no OpenTree para obter os filhos completos.
+    await this._loadChildren(node, node._source === 'api');
     if (node.children.length > 0) node.expanded = true;
     this._recomputeLayout();
     this._requestRender();
   }
  
   async _loadChildren(node, force = false) {
-    if (node.loaded && !force) return;
+    // Nós criados pela cadeia COL da busca ficam com loaded=true mas children=[]
+    // (fetchAndInsertExternalTaxon/focusOnNode marcam loaded=true). Sem esta
+    // checagem eles nunca buscariam os filhos reais no OpenTree.
+    if (node.loaded && !force && node.children.length > 0) return;
     node.loading = true;
  
     let raw = null;
