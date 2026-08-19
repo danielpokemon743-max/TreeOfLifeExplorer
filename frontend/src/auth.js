@@ -683,6 +683,10 @@ export function fetchBanRequests(status = 'pending') {
   return _mod(true, `/ban-requests?status=${encodeURIComponent(status)}`);
 }
 
+export function fetchBanRequestsCount() {
+  return _mod(true, '/ban-requests/count');
+}
+
 export function fetchBanRequest(requestId) {
   return _mod(true, `/ban-requests/${encodeURIComponent(requestId)}`);
 }

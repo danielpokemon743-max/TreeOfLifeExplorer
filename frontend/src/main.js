@@ -32,6 +32,7 @@ import {
   adminUnbanIp,
   fetchChatReports,
   resolveChatReport,
+  fetchBanRequestsCount,
   detectMyIp,
   fetchCaptcha,
   COUNTRIES,
@@ -3751,7 +3752,29 @@ async function syncAdminTab() {
   }
   _isAdminUser = isAdmin;
   if (tabAdmin) tabAdmin.classList.toggle('hidden', !_isAdminUser);
+  if (isAdmin) pollAdminBanBadge();
   return _isAdminUser;
+}
+
+// Badge de solicitações de ban pendentes na aba admin
+const adminBanBadge = document.getElementById('admin-ban-badge');
+
+function setAdminBanBadge(n) {
+  if (!adminBanBadge) return;
+  if (n > 0) {
+    adminBanBadge.textContent = n;
+    adminBanBadge.classList.remove('hidden');
+  } else {
+    adminBanBadge.classList.add('hidden');
+  }
+}
+
+async function pollAdminBanBadge() {
+  if (!_isAdminUser) return;
+  try {
+    const data = await fetchBanRequestsCount();
+    setAdminBanBadge(data.pending || 0);
+  } catch { /* silencioso */ }
 }
 
 // Alterna entre as abas do modal (ranking | admin)
@@ -4001,6 +4024,9 @@ if (closeRankingBtn && rankingModal) {
 }
 if (tabRanking) tabRanking.addEventListener('click', showRankingTab);
 if (tabAdmin) tabAdmin.addEventListener('click', showAdminTab);
+
+// Badge de solicitações de ban pendentes — atualiza periodicamente p/ admin
+setInterval(pollAdminBanBadge, 30000);
 
 document.querySelectorAll('.ranking-sort-btn').forEach(btn => {
   btn.addEventListener('click', () => openRankingPage(btn.dataset.sort));

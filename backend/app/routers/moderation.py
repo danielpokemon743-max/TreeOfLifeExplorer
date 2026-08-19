@@ -183,6 +183,22 @@ async def list_ban_requests(
     return {"requests": [await _serialize_request(db, r) for r in rows]}
 
 
+@router.get("/ban-requests/count")
+async def count_ban_requests(
+    current_user_id: uuid.UUID = Depends(get_current_user_id),
+    db: AsyncSession = Depends(get_db),
+):
+    """Admin: quantas solicitações de ban estão pendentes (para o badge)."""
+    await _require_admin(db, current_user_id)
+    from sqlalchemy import func as sa_func
+    n = await db.scalar(
+        select(sa_func.count())
+        .select_from(BanRequest)
+        .where(BanRequest.status == "pending")
+    )
+    return {"pending": n or 0}
+
+
 @router.get("/ban-requests/{request_id}")
 async def get_ban_request(
     request_id: uuid.UUID,
