@@ -4,10 +4,6 @@ import { sounds } from './SoundManager.js';
 // ───────────────────────────────────────────────────────────────────────────
 // ABRIR / FECHAR MODAIS (animação + som distinto)
 // ───────────────────────────────────────────────────────────────────────────
-const ANIM_IN = 'fxModalIn';
-const ANIM_OUT = 'fxModalOut';
-const PANEL_IN = 'fxPanelIn';
-const PANEL_OUT = 'fxPanelOut';
 const PANEL_SEL = '.info-panel, .stats-panel, .chat-panel';
 
 function isModalOverlay(el) { return el.classList.contains('modal-overlay'); }
@@ -23,8 +19,8 @@ export function openModal(el, sound = 'open') {
   el.classList.remove('hidden', 'fx-modal-leave', 'fx-modal-enter', 'fx-panel-leave', 'fx-panel-enter');
   void el.offsetWidth; // força reflow para reanimar
   const inClass = isModalOverlay(el) ? 'fx-modal-enter' : 'fx-panel-enter';
-  const animName = isModalOverlay(el) ? ANIM_IN : PANEL_IN;
   el.classList.add(inClass);
+  const animName = getComputedStyle(el).animationName;
   el.addEventListener('animationend', function onIn(e) {
     if (e.animationName === animName && e.target === el) {
       el.classList.remove('fx-modal-enter', 'fx-panel-enter');
@@ -43,15 +39,22 @@ export function closeModal(el, sound = 'close') {
   }
   el.classList.remove('fx-modal-enter', 'fx-panel-enter');
   const outClass = isModalOverlay(el) ? 'fx-modal-leave' : 'fx-panel-leave';
-  const animName = isModalOverlay(el) ? ANIM_OUT : PANEL_OUT;
   el.classList.add(outClass);
+  void el.offsetWidth; // garante que a animação de saída rode antes de ler o nome
+  const animName = getComputedStyle(el).animationName;
+  const done = () => {
+    if (!el.classList.contains('fx-modal-leave') && !el.classList.contains('fx-panel-leave')) return;
+    el.classList.remove('fx-modal-leave', 'fx-panel-leave');
+    el.classList.add('hidden');
+  };
   el.addEventListener('animationend', function onOut(e) {
     if (e.animationName === animName && e.target === el) {
-      el.classList.remove('fx-modal-leave', 'fx-panel-leave');
-      el.classList.add('hidden');
       el.removeEventListener('animationend', onOut);
+      done();
     }
   });
+  // Fallback: se o animationend não disparar, esconde na mesma.
+  setTimeout(done, 450);
 }
 
 // ───────────────────────────────────────────────────────────────────────────
