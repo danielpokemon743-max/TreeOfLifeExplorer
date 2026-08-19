@@ -1,7 +1,8 @@
 // 💬 chat.js - Chat global e local da comunidade
 import { sounds } from './SoundManager.js';
 import { openModal, closeModal } from './fx.js';
-import { fetchAdminCheck, getAuthToken, adminBanAccount, adminBanIp } from './auth.js';
+import { fetchAdminCheck, getAuthToken, adminBanAccount, adminBanIp, fetchInbox, fetchInboxUnread, inboxReply, reportUser } from './auth.js';
+import { openUserHistory, openReportModal, moderationReady } from './moderation.js';
 
 const CHAT_BASE = '/api/chat';
 const POLL_INTERVAL_MS = 5000;
@@ -78,7 +79,15 @@ function toggleChat() {
 
 function startPoll() {
   stopPoll();
-  _pollTimer = setInterval(() => { if (_open) loadMessages(false); }, POLL_INTERVAL_MS);
+  pollInboxBadge();
+  _pollTimer = setInterval(() => {
+    if (!_open) return;
+    if (_tab === 'inbox') loadInbox();
+    else {
+      loadMessages(false);
+      pollInboxBadge();
+    }
+  }, POLL_INTERVAL_MS);
 }
 function stopPoll() {
   if (_pollTimer) { clearInterval(_pollTimer); _pollTimer = null; }
@@ -104,12 +113,102 @@ function switchTab(channel) {
   const p = parts();
   p.tabs.forEach(t => t.classList.toggle('active', t.dataset.channel === channel));
   sounds.playSFX('click');
-  loadMessages();
+  if (channel === 'inbox') loadInbox();
+  else loadMessages();
+}
+
+function setBadge(n) {
+  const badge = $('chat-inbox-badge');
+  if (!badge) return;
+  n = Number(n) || 0;
+  badge.textContent = n > 99 ? '99+' : String(n);
+  badge.classList.toggle('hidden', n <= 0);
+}
+
+async function pollInboxBadge() {
+  if (!getAuthToken()) { setBadge(0); return; }
+  try {
+    const data = await fetchInboxUnread();
+    setBadge(data.unread || 0);
+  } catch { /* silencioso */ }
+}
+
+async function loadInbox() {
+  const p = parts();
+  if (!p.list) return;
+  const inputRow = document.querySelector('.chat-input-row');
+  if (inputRow) inputRow.classList.add('hidden');
+  if (!getAuthToken()) {
+    p.list.innerHTML = '<p class="chat-empty">🔒 Faça login para ver as notificações da moderação.</p>';
+    setBadge(0);
+    return;
+  }
+  try {
+    const data = await fetchInbox();
+    const threads = data.threads || [];
+    setBadge(0);
+    if (!threads.length) {
+      p.list.innerHTML = '<p class="chat-empty">Sem notificações por enquanto. Se você foi denunciado, as mensagens do admin aparecem aqui.</p>';
+      return;
+    }
+    p.list.innerHTML = threads.map(t => {
+      const msgs = (t.messages || []).map(m =>
+        '<div class="chat-msg' + (m.is_admin ? ' mod-from-admin' : ' mine') + '">' +
+          '<div class="chat-bubble">' + esc(m.content) + '</div>' +
+          '<div class="chat-time">' + (m.is_admin ? '🛡 Admin · ' : 'Você · ') + fmtTime(m.created_at) + '</div>' +
+        '</div>').join('');
+      const done = t.status !== 'pending';
+      return (
+        '<div class="mod-thread" data-rid="' + esc(t.id) + '">' +
+          '<div class="mod-thread-head">' +
+            '<span class="mod-thread-title">Solicitação de ban</span>' +
+            '<span class="mod-req-badge ' + (done ? 'mod-badge-done' : '') + '">' + esc(t.status) + '</span>' +
+          '</div>' +
+          '<div class="mod-thread-reason">Motivo: “' + esc(t.reason) + '”</div>' +
+          '<div class="mod-thread-msgs">' + (msgs || '<p class="chat-empty">Sem mensagens ainda.</p>') + '</div>' +
+          (done
+            ? '<p class="mod-thread-done">Esta solicitação foi encerrada pela administração.</p>'
+            : '<div class="chat-input-row mod-inbox-reply">' +
+                '<input type="text" maxlength="500" class="mod-inbox-input" placeholder="Responder ao admin…" autocomplete="off" />' +
+                '<button class="chat-send mod-inbox-send" title="Enviar">➤</button>' +
+              '</div>') +
+        '</div>'
+      );
+    }).join('');
+    // delegado de respostas do inbox
+    p.list.querySelectorAll('.mod-inbox-send').forEach(btn => {
+      btn.addEventListener('click', () => sendInboxReply(btn.closest('.mod-thread').dataset.rid, btn.closest('.chat-input-row').querySelector('.mod-inbox-input')));
+    });
+    p.list.querySelectorAll('.mod-inbox-input').forEach(inp => {
+      inp.addEventListener('keydown', ev => {
+        if (ev.key === 'Enter') sendInboxReply(inp.closest('.mod-thread').dataset.rid, inp);
+      });
+    });
+  } catch {
+    p.list.innerHTML = '<p class="chat-empty">Falha ao carregar as notificações.</p>';
+  }
+}
+
+async function sendInboxReply(requestId, input) {
+  const txt = (input.value || '').trim();
+  if (!txt) return;
+  input.disabled = true;
+  const r = await inboxReply(requestId, txt);
+  if (r.ok) {
+    sounds.playSFX('success');
+    loadInbox();
+  } else {
+    sounds.playSFX('denied');
+    input.disabled = false;
+    setStatus('❌ ' + (r.detail || 'Não foi possível responder.'), true);
+  }
 }
 
 async function loadMessages(showError = true) {
   const p = parts();
   if (!p.list) return;
+  const inputRow = document.querySelector('.chat-input-row');
+  if (inputRow) inputRow.classList.remove('hidden');
   try {
     const res = await fetch(`${CHAT_BASE}/messages?channel=${encodeURIComponent(_tab)}&limit=60`, { cache: 'no-store' });
     const data = await res.json().catch(() => null) || { messages: [] };
@@ -150,7 +249,7 @@ function renderMessages(data) {
     const nick = esc(m.nick || 'Sem nick');
     const ipAttr = m.ip ? ` data-ip="${esc(m.ip)}"` : '';
     return (
-      '<div class="chat-msg' + mine + rankClass + '" data-uid="' + esc(m.user_id) + '"' + ipAttr + '>' +
+      '<div class="chat-msg' + mine + rankClass + '" data-uid="' + esc(m.user_id) + '" data-nick="' + esc(m.nick || '') + '"' + ipAttr + '>' +
         '<div class="chat-msg-hdr">' +
           '<span class="chat-avatar">' + esc((m.nick || '?')[0] || '?') + '</span>' +
           '<span class="chat-nick">' + flag + ' ' + nick + '<span class="chat-medal" title="Top ' + m.top_rank + ' do ranking">' + medal + '</span>' + adminBadge + '</span>' +
@@ -217,28 +316,62 @@ function hideContextMenu() {
 
 function openContextMenu(x, y, data) {
   const p = parts();
-  if (!_admin || !p.ctx) return;
+  if (!p.ctx) return;
+  const logged = !!getAuthToken();
+  if (!_admin && !logged) return;
 
   p.ctx.innerHTML = '';
 
-  const btnConta = document.createElement('button');
-  btnConta.type = 'button';
-  btnConta.textContent = '🚫 Banir conta';
-  btnConta.addEventListener('click', () => { hideContextMenu(); doBanAccount(data.uid); });
-  p.ctx.appendChild(btnConta);
-
-  if (data.ip) {
-    const btnIp = document.createElement('button');
-    btnIp.type = 'button';
-    btnIp.textContent = '🌐 Banir IP';
-    btnIp.addEventListener('click', () => { hideContextMenu(); doBanIp(data.ip); });
-    p.ctx.appendChild(btnIp);
+  if (!_admin && logged) {
+    const btnRep = document.createElement('button');
+    btnRep.type = 'button';
+    btnRep.textContent = '🚨 Solicitar banimento';
+    btnRep.addEventListener('click', () => { hideContextMenu(); doReport(data.nick || 'usuário', data.uid); });
+    p.ctx.appendChild(btnRep);
   }
 
-  const menuW = 170, menuH = p.ctx.children.length * 40 + 12;
+  if (_admin) {
+    if (moderationReady()) {
+      const btnHist = document.createElement('button');
+      btnHist.type = 'button';
+      btnHist.textContent = '📜 Ver histórico de mensagens';
+      btnHist.addEventListener('click', () => { hideContextMenu(); openUserHistory(data.uid, data.nick); });
+      p.ctx.appendChild(btnHist);
+    }
+
+    const btnConta = document.createElement('button');
+    btnConta.type = 'button';
+    btnConta.textContent = '🚫 Banir conta';
+    btnConta.addEventListener('click', () => { hideContextMenu(); doBanAccount(data.uid); });
+    p.ctx.appendChild(btnConta);
+
+    if (data.ip) {
+      const btnIp = document.createElement('button');
+      btnIp.type = 'button';
+      btnIp.textContent = '🌐 Banir IP';
+      btnIp.addEventListener('click', () => { hideContextMenu(); doBanIp(data.ip); });
+      p.ctx.appendChild(btnIp);
+    }
+  }
+
+  const menuW = 200, menuH = p.ctx.children.length * 40 + 12;
   p.ctx.style.left = Math.max(8, Math.min(x, window.innerWidth - menuW - 8)) + 'px';
   p.ctx.style.top = Math.max(8, Math.min(y, window.innerHeight - menuH - 8)) + 'px';
   p.ctx.classList.remove('hidden');
+}
+
+async function doReport(nick, uid) {
+  if (!uid) return;
+  if (moderationReady()) openReportModal(nick, uid);
+  else {
+    const reason = prompt('Motivo da denúncia de ' + nick + ' (mínimo 5 caracteres):');
+    if (reason && reason.trim().length >= 5) {
+      const r = await reportUser(uid, reason.trim());
+      setStatus(r.ok ? (r.existing ? '✅ Denúncia já pendente.' : '✅ Denúncia enviada.') : `❌ ${r.detail || 'Falha.'}`, true);
+    } else if (reason != null) {
+      setStatus('❌ Motivo muito curto.', true);
+    }
+  }
 }
 
 async function doBanAccount(uid) {
@@ -276,7 +409,7 @@ export async function initChat() {
     if (!msg) return;
     ev.preventDefault();
     hideContextMenu();
-    openContextMenu(ev.pageX, ev.pageY, { uid: msg.dataset.uid, ip: msg.dataset.ip });
+    openContextMenu(ev.pageX, ev.pageY, { uid: msg.dataset.uid, ip: msg.dataset.ip, nick: msg.dataset.nick });
   });
 
   // Fechar ao clicar fora ou pressionar Esc

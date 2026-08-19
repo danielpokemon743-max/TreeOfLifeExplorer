@@ -5,6 +5,7 @@ const PROGRESS_BASE = '/api/progress';
 const RANKING_BASE = '/api/ranking';
 const ADMIN_BASE = '/api/admin';
 const CHAT_BASE = '/api/chat';
+const MOD_BASE = '/api/moderation';
 
 export function getAuthToken() {
   return localStorage.getItem('passkey_auth_token');
@@ -645,6 +646,78 @@ export async function resolveChatReport(reportId) {
   } catch {
     return { ok: false, detail: 'Erro de rede' };
   }
+}
+
+/**
+ * 21. Moderação: solicitação de ban + caixa de notificações do admin
+ */
+
+async function _mod(tokenRequired, path, options = {}) {
+  const token = getAuthToken();
+  if (!token) return { ok: false, detail: 'Não autenticado' };
+  try {
+    const res = await fetchWithTimeout(`${MOD_BASE}${path}`, {
+      ...options,
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`,
+        ...(options.headers || {}),
+      },
+      cache: 'no-store',
+    });
+    const body = await res.json().catch(() => ({}));
+    return { ok: res.ok, status: res.status, detail: body.detail || '', ...body };
+  } catch {
+    return { ok: false, detail: 'Erro de rede' };
+  }
+}
+
+export function reportUser(targetUserId, reason) {
+  return _mod(true, '/report-user', {
+    method: 'POST',
+    body: JSON.stringify({ target_user_id: targetUserId, reason }),
+  });
+}
+
+export function fetchBanRequests(status = 'pending') {
+  return _mod(true, `/ban-requests?status=${encodeURIComponent(status)}`);
+}
+
+export function fetchBanRequest(requestId) {
+  return _mod(true, `/ban-requests/${encodeURIComponent(requestId)}`);
+}
+
+export function adminReplyBanRequest(requestId, content) {
+  return _mod(true, `/ban-requests/${encodeURIComponent(requestId)}/reply`, {
+    method: 'POST',
+    body: JSON.stringify({ content }),
+  });
+}
+
+export function resolveBanRequest(requestId, outcome) {
+  return _mod(true, `/ban-requests/${encodeURIComponent(requestId)}/resolve`, {
+    method: 'POST',
+    body: JSON.stringify({ outcome }),
+  });
+}
+
+export function fetchUserChatHistory(userId) {
+  return _mod(true, `${ADMIN_BASE}/users/${encodeURIComponent(userId)}/messages`);
+}
+
+export function fetchInbox() {
+  return _mod(true, '/inbox');
+}
+
+export function fetchInboxUnread() {
+  return _mod(true, '/inbox/unread');
+}
+
+export function inboxReply(requestId, content) {
+  return _mod(true, `/inbox/${encodeURIComponent(requestId)}/reply`, {
+    method: 'POST',
+    body: JSON.stringify({ content }),
+  });
 }
 
 const ACHIEVEMENT_NAMES = {

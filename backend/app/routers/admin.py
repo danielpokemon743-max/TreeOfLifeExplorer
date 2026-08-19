@@ -6,7 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func as sa_func
 
 from app.database import get_db
-from app.models import User, IpBan, Achievement, Discovery, SiteView
+from app.models import User, IpBan, Achievement, Discovery, SiteView, BanRequest, ChatMessage
 from app.security import get_current_user_id
 from app.routers.auth import is_admin_user, client_ip
 from app.routers.progress import level_from_xp
@@ -79,6 +79,23 @@ async def list_users(
         })
     return {"users": out}
 
+async def _resolve_pending_requests(db: AsyncSession, user_id: uuid.UUID) -> int:
+    """Marca como resolvidas as solicitações de ban pendentes contra um usuário."""
+    now = datetime.now(timezone.utc)
+    rows = await db.execute(
+        select(BanRequest).where(
+            BanRequest.target_user_id == user_id,
+            BanRequest.status == "pending",
+        )
+    )
+    count = 0
+    for req in rows.scalars().all():
+        req.status = "resolved"
+        req.resolved_at = now
+        count += 1
+    return count
+
+
 class BanAccountRequest(BaseModel):
     user_id: str
 
@@ -104,6 +121,7 @@ async def ban_account(
         raise HTTPException(status_code=400, detail="Não é possível banir outro administrador.")
 
     user.is_banned = True
+    await _resolve_pending_requests(db, uid)
     await db.commit()
     return {"status": "banned", "user_id": str(user.id)}
 
@@ -213,6 +231,51 @@ async def unban_ip(
         await db.commit()
         return {"status": "unbanned", "ip": ip}
     return {"status": "not_found", "ip": ip}
+
+
+@router.get("/users/{user_id}/messages")
+async def user_message_history(
+    user_id: uuid.UUID,
+    current_user_id: uuid.UUID = Depends(get_current_user_id),
+    db: AsyncSession = Depends(get_db),
+):
+    """Admin: todas as mensagens de chat já enviadas por um usuário (perfil)."""
+    await _require_admin(db, current_user_id)
+
+    user = await db.get(User, user_id)
+    if not user:
+        raise HTTPException(status_code=404, detail="Usuário não encontrado.")
+
+    rows = await db.execute(
+        select(ChatMessage)
+        .where(ChatMessage.user_id == user_id)
+        .order_by(ChatMessage.created_at.desc())
+        .limit(200)
+    )
+    messages = [
+        {
+            "id": str(m.id),
+            "channel": m.channel,
+            "content": m.content,
+            "ip": m.ip or "",
+            "country": m.country or "",
+            "created_at": m.created_at.isoformat() if m.created_at else None,
+        }
+        for m in rows.scalars().all()
+    ]
+    return {
+        "user": {
+            "id": str(user.id),
+            "display_name": user.display_name,
+            "country": user.country or "",
+            "last_ip": user.last_ip or "",
+            "is_banned": bool(user.is_banned),
+            "is_admin": is_admin_user(user),
+            "created_at": user.created_at.isoformat() if user.created_at else None,
+            "last_login": user.last_login.isoformat() if user.last_login else None,
+        },
+        "messages": list(reversed(messages)),
+    }
 
 
 @router.get("/views")

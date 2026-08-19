@@ -381,6 +381,14 @@
           <p style="color: #94a3b8; text-align: center; padding: 20px;">Carregando…</p>
         </div>
 
+        <h4 style="font-size:14px; margin-bottom:8px;">🚨 Solicitações de Ban</h4>
+        <p style="font-size:12px; color:#888; margin:0 0 8px;">
+          Usuários pediram o banimento de alguém. Abra o perfil para ver todas as mensagens e responda pela caixa.
+        </p>
+        <div id="admin-ban-requests-list" class="ranking-list" style="max-height:220px; overflow-y:auto; margin-bottom:16px;">
+          <p style="color: #94a3b8; text-align: center; padding: 20px;">Carregando…</p>
+        </div>
+
         <h4 style="font-size:14px; margin-bottom:8px;">👥 Usuários Cadastrados</h4>
         <p style="font-size:12px; color:#888; margin:0 0 8px;">
           Clique em <strong>Banir</strong> para proibir o login daquela conta; <strong>Desbanir</strong> libera novamente.
@@ -499,6 +507,9 @@
     <div class="chat-tabs" role="tablist">
       <button class="chat-tab active" data-channel="global" role="tab">🌍 Global</button>
       <button class="chat-tab" data-channel="local" role="tab">📍 Local</button>
+      <button class="chat-tab" data-channel="inbox" role="tab" title="Mensagens do admin sobre solicitações de ban">
+        📩 Notificações <span id="chat-inbox-badge" class="chat-inbox-badge hidden">0</span>
+      </button>
     </div>
 
     <div id="chat-messages" class="chat-messages"></div>
@@ -513,6 +524,48 @@
 
   <!-- Menu de contexto do admin (clique direito numa mensagem) -->
   <div id="chat-context-menu" class="chat-context-menu hidden"></div>
+
+  <!-- 🚨 Modal: histórico de mensagens de um usuário (admin) -->
+  <div id="mod-history-modal" class="modal-overlay hidden">
+    <div class="modal-content mod-history-content">
+      <button id="mod-history-close" class="close-btn">&times;</button>
+      <h2 id="mod-history-title">Histórico de mensagens</h2>
+      <div id="mod-history-body" class="mod-history-body">
+        <p style="color: #94a3b8; text-align: center; padding: 20px;">Carregando…</p>
+      </div>
+      <div class="mod-history-actions">
+        <button id="mod-history-ban" class="mod-btn mod-btn-danger">🚫 Banir conta</button>
+        <button id="mod-history-banip" class="mod-btn">🌐 Banir IP</button>
+        <button id="mod-history-reply" class="mod-btn">💬 Responder</button>
+      </div>
+      <p id="mod-history-msg" class="mod-history-msg"></p>
+    </div>
+  </div>
+
+  <!-- 💬 Modal: responder a pessoa denunciada (admin) -->
+  <div id="mod-reply-modal" class="modal-overlay hidden">
+    <div class="modal-content mod-reply-content">
+      <button id="mod-reply-close" class="close-btn">&times;</button>
+      <h2 id="mod-reply-title">Responder</h2>
+      <textarea id="mod-reply-text" class="mod-reply-text" maxlength="500"
+        placeholder="Escreva sua mensagem para a pessoa…"></textarea>
+      <button id="mod-reply-send" class="mod-btn mod-btn-primary">Enviar</button>
+      <p id="mod-reply-msg" class="mod-history-msg"></p>
+    </div>
+  </div>
+
+  <!-- 🚨 Modal: solicitar banimento de um usuário -->
+  <div id="mod-report-modal" class="modal-overlay hidden">
+    <div class="modal-content mod-report-content">
+      <button id="mod-report-close" class="close-btn">&times;</button>
+      <h2>🚨 Solicitar banimento</h2>
+      <p class="mod-report-hint">Quem você quer denunciar: <strong id="mod-report-target"></strong></p>
+      <textarea id="mod-report-text" class="mod-reply-text" maxlength="300"
+        placeholder="Descreva o motivo (mínimo de 5 caracteres)…"></textarea>
+      <button id="mod-report-send" class="mod-btn mod-btn-danger">Solicitar</button>
+      <p id="mod-report-msg" class="mod-history-msg"></p>
+    </div>
+  </div>
 
   <script type="module" src="/src/main.js"></script>
 </body>

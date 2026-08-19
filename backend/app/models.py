@@ -189,3 +189,53 @@ class ChatReport(Base):
     )
 
     user: Mapped[Optional["User"]] = relationship()
+
+
+# Solicitação de banimento: um usuário pede que o admin analise outro usuário.
+class BanRequest(Base):
+    __tablename__ = "ban_requests"
+
+    id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=uuid.uuid4)
+    requester_user_id: Mapped[Optional[uuid.UUID]] = mapped_column(
+        ForeignKey("users.id", ondelete="SET NULL"), nullable=True
+    )
+    target_user_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"), index=True
+    )
+    reason: Mapped[str] = mapped_column(String(300), nullable=False)
+    # pending = aguardando análise; resolved = tratado; dismissed = sem ação.
+    status: Mapped[str] = mapped_column(String(20), default="pending", index=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    resolved_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
+
+    requester: Mapped[Optional["User"]] = relationship(foreign_keys=[requester_user_id])
+    target: Mapped[Optional["User"]] = relationship(foreign_keys=[target_user_id])
+    messages: Mapped[List["BanRequestMessage"]] = relationship(
+        back_populates="ban_request", cascade="all, delete-orphan"
+    )
+
+
+# Mensagens trocadas dentro de uma solicitação de ban (admin <-> usuário reportado).
+class BanRequestMessage(Base):
+    __tablename__ = "ban_request_messages"
+
+    id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=uuid.uuid4)
+    ban_request_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("ban_requests.id", ondelete="CASCADE"), index=True
+    )
+    sender_user_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"), index=True
+    )
+    receiver_user_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"), index=True
+    )
+    content: Mapped[str] = mapped_column(String(500), nullable=False)
+    # Mensagens do admin começam não-lidas; a pessoa marca ao abrir a caixa.
+    read: Mapped[bool] = mapped_column(default=False, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )
+
+    ban_request: Mapped["BanRequest"] = relationship(back_populates="messages")
+    sender: Mapped[Optional["User"]] = relationship(foreign_keys=[sender_user_id])
+    receiver: Mapped[Optional["User"]] = relationship(foreign_keys=[receiver_user_id])

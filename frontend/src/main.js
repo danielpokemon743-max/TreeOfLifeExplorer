@@ -4,6 +4,7 @@ import { sounds }                 from './SoundManager.js';
 import { initDailyModule }        from './daily.js';
 import { openModal, closeModal, applyLighting, initFX } from './fx.js';
 import { initChat, closeChat } from './chat.js';
+import { initModeration, refreshBanRequests } from './moderation.js';
 import { 
   registerPasskey, 
   loginPasskey, 
@@ -3953,6 +3954,9 @@ async function loadAdminPanel() {
       });
     }
   }
+
+  // ── Solicitações de ban ──
+  refreshBanRequests('admin-ban-requests-list');
 }
 
 // Preenche o campo de IP com o IP do admin logado + botão de atalho
@@ -4226,4 +4230,5 @@ async function handleDevCheat() {
 
 // ─── EFEITOS VISUAIS: luz do ponteiro, iluminação dinâmica e sons ────────────
 initFX();
+initModeration();
 initChat();

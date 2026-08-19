@@ -1605,3 +1605,132 @@ html { --lx: 50%; --ly: 35%; --lc: 0.5; --lr: 255; --lg: 255; --lb: 255; }
   0%, 100% { box-shadow: 0 0 6px rgba(205, 127, 50, 0.20); }
   50%      { box-shadow: 0 0 14px rgba(205, 127, 50, 0.55); }
 }
+
+/* ─── Aba de notificações do chat (inbox) ─────────────────────────────────── */
+.chat-inbox-badge {
+  display: inline-block;
+  min-width: 16px;
+  padding: 1px 5px;
+  margin-left: 4px;
+  border-radius: 10px;
+  background: #e74c3c;
+  color: #fff;
+  font-size: 10px;
+  font-weight: 700;
+  vertical-align: middle;
+  line-height: 14px;
+}
+.mod-thread {
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
+  padding: 10px 12px;
+  margin-bottom: 10px;
+}
+.mod-thread-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 6px;
+}
+.mod-thread-title { font-size: 13px; font-weight: 700; }
+.mod-thread-reason { font-size: 12px; color: var(--muted); margin-bottom: 8px; }
+.mod-thread-done { font-size: 11px; color: #f39c12; margin-top: 8px; }
+.mod-thread-msgs { display: flex; flex-direction: column; gap: 6px; }
+.mod-from-admin .chat-bubble { background: rgba(84, 138, 255, 0.16); align-self: flex-start; }
+.mod-inbox-reply { display: flex; margin-top: 8px; gap: 6px; }
+.mod-inbox-input {
+  flex: 1;
+  min-width: 0;
+  border-radius: 18px;
+  border: 1px solid rgba(255,255,255,0.12);
+  background: rgba(255,255,255,0.06);
+  color: #eef;
+  padding: 7px 12px;
+  font-size: 13px;
+  outline: none;
+}
+
+/* ─── Moderação (modais admin) ────────────────────────────────────────────── */
+.mod-history-content, .mod-reply-content, .mod-report-content { max-width: 460px; }
+.mod-history-body { max-height: 320px; overflow-y: auto; margin: 10px 0; }
+.mod-thread-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 12px;
+  color: var(--muted);
+  background: rgba(255,255,255,0.04);
+  border-radius: 10px;
+  padding: 8px 10px;
+  margin-bottom: 10px;
+}
+.mod-thread-list { display: flex; flex-direction: column; gap: 8px; }
+.mod-msg-row { display: flex; flex-wrap: wrap; gap: 6px; font-size: 13px; }
+.mod-msg-time { font-size: 11px; color: #888; }
+.mod-msg-who { font-weight: 700; color: #6fb1ff; }
+.mod-msg-bubble {
+  flex: 1;
+  min-width: 120px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  border-radius: 10px;
+  padding: 5px 9px;
+  word-break: break-word;
+  white-space: pre-wrap;
+}
+.mod-history-actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 8px; }
+.mod-history-msg { font-size: 12px; color: #2ecc71; margin-top: 8px; min-height: 14px; }
+.mod-empty { color: var(--muted); text-align: center; padding: 14px; font-size: 12px; }
+.mod-btn {
+  border: 1px solid rgba(255,255,255,0.15);
+  background: rgba(255,255,255,0.07);
+  color: #eef;
+  border-radius: 8px;
+  padding: 6px 10px;
+  font-size: 12px;
+  cursor: pointer;
+}
+.mod-btn:hover { background: rgba(255,255,255,0.14); }
+.mod-btn-danger { border-color: rgba(231,76,60,0.5); background: rgba(231,76,60,0.16); }
+.mod-btn-success { border-color: rgba(46,204,113,0.45); background: rgba(46,204,113,0.14); }
+.mod-btn-primary { width: 100%; margin-top: 8px; background: rgba(46,204,113,0.2); border-color: rgba(46,204,113,0.5); }
+.mod-reply-text {
+  width: 100%;
+  min-height: 90px;
+  resize: vertical;
+  border-radius: 10px;
+  border: 1px solid rgba(255,255,255,0.15);
+  background: rgba(255,255,255,0.06);
+  color: #eef;
+  padding: 10px;
+  font-size: 13px;
+  font-family: inherit;
+  outline: none;
+  box-sizing: border-box;
+}
+.mod-report-hint { font-size: 13px; color: var(--muted); margin: 8px 0; }
+
+/* ─── Lista de solicitações de ban (painel admin) ────────────────────────── */
+.mod-req-item {
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 10px;
+  padding: 8px 10px;
+  margin-bottom: 8px;
+  background: rgba(255,255,255,0.03);
+}
+.mod-req-head { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; }
+.mod-req-name { font-size: 13px; font-weight: 700; }
+.mod-req-badge {
+  font-size: 10px;
+  padding: 1px 7px;
+  border-radius: 9px;
+  background: #e67e22;
+  color: #fff;
+  text-transform: capitalize;
+}
+.mod-badge-done { background: #2ecc71; }
+.mod-req-meta { font-size: 11px; color: var(--muted); margin-bottom: 2px; }
+.mod-req-reason { font-size: 12px; font-style: italic; margin-bottom: 4px; }
+.mod-req-last { font-size: 11px; color: var(--muted); margin-bottom: 6px; }
+.mod-req-actions { display: flex; gap: 6px; flex-wrap: wrap; }

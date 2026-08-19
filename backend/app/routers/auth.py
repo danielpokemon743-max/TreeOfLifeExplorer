@@ -404,6 +404,7 @@ async def get_me(request: Request, current_user_id: uuid.UUID = Depends(get_curr
         ban_detail = "Seu endereço de IP foi banido pela administração."
 
     return {
+        "id": str(user.id),
         "display_name": user.display_name,
         "last_login": user.last_login.isoformat() if user.last_login else None,
         "discoveries_count": disc_count or 0,
