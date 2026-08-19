@@ -31,6 +31,13 @@ function fmtTime(iso) {
 }
 
 const $ = (id) => document.getElementById(id);
+
+// Links (http/www/domínio com extensão) não são permitidos no chat.
+const _LINK_TLDS = 'com|net|org|info|biz|io|co|gg|xyz|tv|me|cc|mobi|tel|top|club|site|online|store|shop|blog|tech|app|dev|link|click|live|fun|br|us|uk|de|fr|es|it|pt|ru|ca|au|ar|cl|mx|co|jp|cn|in|eu|be|ch|nl|se|no|dk|fi|pl|cz|tk|ml|ga|cf|gq|ly|to|ai|ws'.split('|');
+const _LINK_REGEX = new RegExp('(?:[a-z][a-z0-9+.-]{0,30}://|www\\.|(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\\.)+(' + _LINK_TLDS.join('|') + ')(?:[/?#]\\S*)?)', 'i');
+function _textHasLink(text) {
+  return _LINK_REGEX.test(text || '');
+}
 function parts() {
   return {
     fab: $('chat-fab'),
@@ -165,6 +172,12 @@ async function sendMessage() {
 
   if (!getAuthToken()) {
     setStatus('🔒 Você precisa estar logado para enviar mensagens.', true);
+    sounds.playSFX('denied');
+    return;
+  }
+
+  if (_textHasLink(txt)) {
+    setStatus('🚫 Links não são permitidos no chat.', true);
     sounds.playSFX('denied');
     return;
   }

@@ -15,7 +15,7 @@ from app.geolocation import flag_emoji, geo_lookup, haversine_km
 from app.models import ChatMessage, ChatReport, IpBan, User
 from app.routers.auth import client_ip, is_admin_user, is_ip_banned
 from app.routers.progress import level_from_xp
-from app.security import get_current_user_id, text_contains_bad_words, verify_token
+from app.security import get_current_user_id, text_contains_bad_words, text_contains_link, verify_token
 
 router = APIRouter(prefix="/api/chat", tags=["Chat"])
 
@@ -236,16 +236,20 @@ async def send_message(
         )
 
     # Filtro de língua ofensiva: BLOQUEIA o envio E avisa o admin (chat_reports).
-    if text_contains_bad_words(content):
+    if text_contains_bad_words(content) or text_contains_link(content):
         db.add(ChatReport(
             user_id=current_user_id,
             content_attempted=content[:MAX_MESSAGE_LENGTH],
             ip=ip or None,
         ))
         await db.commit()
+        if text_contains_link(content):
+            detail = "Links não são permitidos no chat."
+        else:
+            detail = "Sua mensagem foi bloqueada por conter linguagem inapropriada."
         raise HTTPException(
             status_code=400,
-            detail="Sua mensagem foi bloqueada por conter linguagem inapropriada.",
+            detail=detail,
         )
 
     if _hit_rate_limit(current_user_id):
