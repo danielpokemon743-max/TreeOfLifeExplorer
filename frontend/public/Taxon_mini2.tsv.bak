@@ -440,54 +440,54 @@ taxonID	datasetID	parentNameUsageID	acceptedNameUsageID	originalNameUsageID	scie
 7375758	7ddf754f-d193-4cc9-b351-99906754a03b	44			Leptocardii		Leptocardii	Leptocardii			class			accepted			Animalia	Chordata	Leptocardii			
 11500725	7ddf754f-d193-4cc9-b351-99906754a03b	44			Dipneusti		Dipneusti	Dipneusti			class			accepted			Animalia	Chordata	Dipneusti			
 119	7ddf754f-d193-4cc9-b351-99906754a03b	44			Myxini		Myxini	Myxini			class			accepted			Animalia	Chordata	Myxini			
-590	7ddf754f-d193-4cc9-b351-99906754a03b	8VR36			Scorpaeniformes		Scorpaeniformes	Scorpaeniformes			order			accepted			Animalia	Chordata	Actinopterygii	Scorpaeniformes		
-1165	7ddf754f-d193-4cc9-b351-99906754a03b	8VR36			Gymnotiformes		Gymnotiformes	Gymnotiformes			order			accepted			Animalia	Chordata	Actinopterygii	Gymnotiformes		
-496	7ddf754f-d193-4cc9-b351-99906754a03b	8VR36			Atheriniformes		Atheriniformes	Atheriniformes			order			accepted			Animalia	Chordata	Actinopterygii	Atheriniformes		
-498	7ddf754f-d193-4cc9-b351-99906754a03b	8VR36			Beloniformes		Beloniformes	Beloniformes			order			accepted			Animalia	Chordata	Actinopterygii	Beloniformes		
-1163	7ddf754f-d193-4cc9-b351-99906754a03b	8VR36			Gobiesociformes		Gobiesociformes	Gobiesociformes			order			accepted			Animalia	Chordata	Actinopterygii	Gobiesociformes		
-1167	7ddf754f-d193-4cc9-b351-99906754a03b	8VR36			Lepisosteiformes		Lepisosteiformes	Lepisosteiformes			order			accepted			Animalia	Chordata	Actinopterygii	Lepisosteiformes		
-774	7ddf754f-d193-4cc9-b351-99906754a03b	8VR36			Stomiiformes		Stomiiformes	Stomiiformes			order			accepted			Animalia	Chordata	Actinopterygii	Stomiiformes		
-499	7ddf754f-d193-4cc9-b351-99906754a03b	8VR36			Beryciformes		Beryciformes	Beryciformes			order			accepted			Animalia	Chordata	Actinopterygii	Beryciformes		
-1153	7ddf754f-d193-4cc9-b351-99906754a03b	8VR36			Cypriniformes		Cypriniformes	Cypriniformes			order			accepted			Animalia	Chordata	Actinopterygii	Cypriniformes		
-888	7ddf754f-d193-4cc9-b351-99906754a03b	8VR36			Zeiformes		Zeiformes	Zeiformes			order			accepted			Animalia	Chordata	Actinopterygii	Zeiformes		
-549	7ddf754f-d193-4cc9-b351-99906754a03b	8VR36			Gadiformes		Gadiformes	Gadiformes			order			accepted			Animalia	Chordata	Actinopterygii	Gadiformes		
-1105	7ddf754f-d193-4cc9-b351-99906754a03b	8VR36			Ateleopodiformes		Ateleopodiformes	Ateleopodiformes			order			accepted			Animalia	Chordata	Actinopterygii	Ateleopodiformes		
-1306	7ddf754f-d193-4cc9-b351-99906754a03b	8VR36			Myctophiformes		Myctophiformes	Myctophiformes			order			accepted			Animalia	Chordata	Actinopterygii	Myctophiformes		
-708	7ddf754f-d193-4cc9-b351-99906754a03b	8VR36			Siluriformes		Siluriformes	Siluriformes			order			accepted			Animalia	Chordata	Actinopterygii	Siluriformes		
-1308	7ddf754f-d193-4cc9-b351-99906754a03b	8VR36			Ophidiiformes		Ophidiiformes	Ophidiiformes			order			accepted			Animalia	Chordata	Actinopterygii	Ophidiiformes		
-1166	7ddf754f-d193-4cc9-b351-99906754a03b	8VR36			Lampriformes		Lampriformes	Lampriformes			order			accepted			Animalia	Chordata	Actinopterygii	Lampriformes		
-497	7ddf754f-d193-4cc9-b351-99906754a03b	8VR36			Aulopiformes		Aulopiformes	Aulopiformes			order			accepted			Animalia	Chordata	Actinopterygii	Aulopiformes		
-550	7ddf754f-d193-4cc9-b351-99906754a03b	8VR36			Gasterosteiformes		Gasterosteiformes	Gasterosteiformes			order			accepted			Animalia	Chordata	Actinopterygii	Gasterosteiformes		
-890	7ddf754f-d193-4cc9-b351-99906754a03b	8VR36			Stephanoberyciformes		Stephanoberyciformes	Stephanoberyciformes			order			accepted			Animalia	Chordata	Actinopterygii	Stephanoberyciformes		
-588	7ddf754f-d193-4cc9-b351-99906754a03b	8VR36			Pleuronectiformes		Pleuronectiformes	Pleuronectiformes			order			accepted			Animalia	Chordata	Actinopterygii	Pleuronectiformes		
-1106	7ddf754f-d193-4cc9-b351-99906754a03b	8VR36			Batrachoidiformes		Batrachoidiformes	Batrachoidiformes			order			accepted			Animalia	Chordata	Actinopterygii	Batrachoidiformes		
-1103	7ddf754f-d193-4cc9-b351-99906754a03b	8VR36			Acipenseriformes		Acipenseriformes	Acipenseriformes			order			accepted			Animalia	Chordata	Actinopterygii	Acipenseriformes		
-1164	7ddf754f-d193-4cc9-b351-99906754a03b	8VR36			Gonorynchiformes		Gonorynchiformes	Gonorynchiformes			order			accepted			Animalia	Chordata	Actinopterygii	Gonorynchiformes		
-772	7ddf754f-d193-4cc9-b351-99906754a03b	8VR36			Tetraodontiformes		Tetraodontiformes	Tetraodontiformes			order			accepted			Animalia	Chordata	Actinopterygii	Tetraodontiformes		
-1307	7ddf754f-d193-4cc9-b351-99906754a03b	8VR36			Notacanthiformes		Notacanthiformes	Notacanthiformes			order			accepted			Animalia	Chordata	Actinopterygii	Notacanthiformes		
-1067	7ddf754f-d193-4cc9-b351-99906754a03b	8VR36			Mugiliformes		Mugiliformes	Mugiliformes			order			accepted			Animalia	Chordata	Actinopterygii	Mugiliformes		
-589	7ddf754f-d193-4cc9-b351-99906754a03b	8VR36			Polymixiiformes		Polymixiiformes	Polymixiiformes			order			accepted			Animalia	Chordata	Actinopterygii	Polymixiiformes		
-537	7ddf754f-d193-4cc9-b351-99906754a03b	8VR36			Characiformes		Characiformes	Characiformes			order			accepted			Animalia	Chordata	Actinopterygii	Characiformes		
-1311	7ddf754f-d193-4cc9-b351-99906754a03b	8VR36			Polypteriformes		Polypteriformes	Polypteriformes			order			accepted			Animalia	Chordata	Actinopterygii	Polypteriformes		
-773	7ddf754f-d193-4cc9-b351-99906754a03b	8VR36			Syngnathiformes		Syngnathiformes	Syngnathiformes			order			accepted			Animalia	Chordata	Actinopterygii	Syngnathiformes		
-548	7ddf754f-d193-4cc9-b351-99906754a03b	8VR36			Esociformes		Esociformes	Esociformes			order			accepted			Animalia	Chordata	Actinopterygii	Esociformes		
-1104	7ddf754f-d193-4cc9-b351-99906754a03b	8VR36			Albuliformes		Albuliformes	Albuliformes			order			accepted			Animalia	Chordata	Actinopterygii	Albuliformes		
-538	7ddf754f-d193-4cc9-b351-99906754a03b	8VR36			Clupeiformes		Clupeiformes	Clupeiformes			order			accepted			Animalia	Chordata	Actinopterygii	Clupeiformes		
-1310	7ddf754f-d193-4cc9-b351-99906754a03b	8VR36			Percopsiformes		Percopsiformes	Percopsiformes			order			accepted			Animalia	Chordata	Actinopterygii	Percopsiformes		
-587	7ddf754f-d193-4cc9-b351-99906754a03b	8VR36			Perciformes		Perciformes	Perciformes			order			accepted			Animalia	Chordata	Actinopterygii	Perciformes		
+590	7ddf754f-d193-4cc9-b351-99906754a03b	44			Scorpaeniformes		Scorpaeniformes	Scorpaeniformes			order			accepted			Animalia	Chordata		Scorpaeniformes		
+1165	7ddf754f-d193-4cc9-b351-99906754a03b	44			Gymnotiformes		Gymnotiformes	Gymnotiformes			order			accepted			Animalia	Chordata		Gymnotiformes		
+496	7ddf754f-d193-4cc9-b351-99906754a03b	44			Atheriniformes		Atheriniformes	Atheriniformes			order			accepted			Animalia	Chordata		Atheriniformes		
+498	7ddf754f-d193-4cc9-b351-99906754a03b	44			Beloniformes		Beloniformes	Beloniformes			order			accepted			Animalia	Chordata		Beloniformes		
+1163	7ddf754f-d193-4cc9-b351-99906754a03b	44			Gobiesociformes		Gobiesociformes	Gobiesociformes			order			accepted			Animalia	Chordata		Gobiesociformes		
+1167	7ddf754f-d193-4cc9-b351-99906754a03b	44			Lepisosteiformes		Lepisosteiformes	Lepisosteiformes			order			accepted			Animalia	Chordata		Lepisosteiformes		
+774	7ddf754f-d193-4cc9-b351-99906754a03b	44			Stomiiformes		Stomiiformes	Stomiiformes			order			accepted			Animalia	Chordata		Stomiiformes		
+499	7ddf754f-d193-4cc9-b351-99906754a03b	44			Beryciformes		Beryciformes	Beryciformes			order			accepted			Animalia	Chordata		Beryciformes		
+1153	7ddf754f-d193-4cc9-b351-99906754a03b	44			Cypriniformes		Cypriniformes	Cypriniformes			order			accepted			Animalia	Chordata		Cypriniformes		
+888	7ddf754f-d193-4cc9-b351-99906754a03b	44			Zeiformes		Zeiformes	Zeiformes			order			accepted			Animalia	Chordata		Zeiformes		
+549	7ddf754f-d193-4cc9-b351-99906754a03b	44			Gadiformes		Gadiformes	Gadiformes			order			accepted			Animalia	Chordata		Gadiformes		
+1105	7ddf754f-d193-4cc9-b351-99906754a03b	44			Ateleopodiformes		Ateleopodiformes	Ateleopodiformes			order			accepted			Animalia	Chordata		Ateleopodiformes		
+1306	7ddf754f-d193-4cc9-b351-99906754a03b	44			Myctophiformes		Myctophiformes	Myctophiformes			order			accepted			Animalia	Chordata		Myctophiformes		
+708	7ddf754f-d193-4cc9-b351-99906754a03b	44			Siluriformes		Siluriformes	Siluriformes			order			accepted			Animalia	Chordata		Siluriformes		
+1308	7ddf754f-d193-4cc9-b351-99906754a03b	44			Ophidiiformes		Ophidiiformes	Ophidiiformes			order			accepted			Animalia	Chordata		Ophidiiformes		
+1166	7ddf754f-d193-4cc9-b351-99906754a03b	44			Lampriformes		Lampriformes	Lampriformes			order			accepted			Animalia	Chordata		Lampriformes		
+497	7ddf754f-d193-4cc9-b351-99906754a03b	44			Aulopiformes		Aulopiformes	Aulopiformes			order			accepted			Animalia	Chordata		Aulopiformes		
+550	7ddf754f-d193-4cc9-b351-99906754a03b	44			Gasterosteiformes		Gasterosteiformes	Gasterosteiformes			order			accepted			Animalia	Chordata		Gasterosteiformes		
+890	7ddf754f-d193-4cc9-b351-99906754a03b	44			Stephanoberyciformes		Stephanoberyciformes	Stephanoberyciformes			order			accepted			Animalia	Chordata		Stephanoberyciformes		
+588	7ddf754f-d193-4cc9-b351-99906754a03b	44			Pleuronectiformes		Pleuronectiformes	Pleuronectiformes			order			accepted			Animalia	Chordata		Pleuronectiformes		
+1106	7ddf754f-d193-4cc9-b351-99906754a03b	44			Batrachoidiformes		Batrachoidiformes	Batrachoidiformes			order			accepted			Animalia	Chordata		Batrachoidiformes		
+1103	7ddf754f-d193-4cc9-b351-99906754a03b	44			Acipenseriformes		Acipenseriformes	Acipenseriformes			order			accepted			Animalia	Chordata		Acipenseriformes		
+1164	7ddf754f-d193-4cc9-b351-99906754a03b	44			Gonorynchiformes		Gonorynchiformes	Gonorynchiformes			order			accepted			Animalia	Chordata		Gonorynchiformes		
+772	7ddf754f-d193-4cc9-b351-99906754a03b	44			Tetraodontiformes		Tetraodontiformes	Tetraodontiformes			order			accepted			Animalia	Chordata		Tetraodontiformes		
+1307	7ddf754f-d193-4cc9-b351-99906754a03b	44			Notacanthiformes		Notacanthiformes	Notacanthiformes			order			accepted			Animalia	Chordata		Notacanthiformes		
+1067	7ddf754f-d193-4cc9-b351-99906754a03b	44			Mugiliformes		Mugiliformes	Mugiliformes			order			accepted			Animalia	Chordata		Mugiliformes		
+589	7ddf754f-d193-4cc9-b351-99906754a03b	44			Polymixiiformes		Polymixiiformes	Polymixiiformes			order			accepted			Animalia	Chordata		Polymixiiformes		
+537	7ddf754f-d193-4cc9-b351-99906754a03b	44			Characiformes		Characiformes	Characiformes			order			accepted			Animalia	Chordata		Characiformes		
+1311	7ddf754f-d193-4cc9-b351-99906754a03b	44			Polypteriformes		Polypteriformes	Polypteriformes			order			accepted			Animalia	Chordata		Polypteriformes		
+773	7ddf754f-d193-4cc9-b351-99906754a03b	44			Syngnathiformes		Syngnathiformes	Syngnathiformes			order			accepted			Animalia	Chordata		Syngnathiformes		
+548	7ddf754f-d193-4cc9-b351-99906754a03b	44			Esociformes		Esociformes	Esociformes			order			accepted			Animalia	Chordata		Esociformes		
+1104	7ddf754f-d193-4cc9-b351-99906754a03b	44			Albuliformes		Albuliformes	Albuliformes			order			accepted			Animalia	Chordata		Albuliformes		
+538	7ddf754f-d193-4cc9-b351-99906754a03b	44			Clupeiformes		Clupeiformes	Clupeiformes			order			accepted			Animalia	Chordata		Clupeiformes		
+1310	7ddf754f-d193-4cc9-b351-99906754a03b	44			Percopsiformes		Percopsiformes	Percopsiformes			order			accepted			Animalia	Chordata		Percopsiformes		
+587	7ddf754f-d193-4cc9-b351-99906754a03b	44			Perciformes		Perciformes	Perciformes			order			accepted			Animalia	Chordata		Perciformes		
 8139547	7ddf754f-d193-4cc9-b351-99906754a03b	7190138			Acoela		Acoela	Acoela			order			accepted			Animalia	Xenacoelomorpha		Acoela		
-1313	7ddf754f-d193-4cc9-b351-99906754a03b	8VR36			Salmoniformes		Salmoniformes	Salmoniformes			order			accepted			Animalia	Chordata	Actinopterygii	Salmoniformes		
-494	7ddf754f-d193-4cc9-b351-99906754a03b	8VR36			Amiiformes		Amiiformes	Amiiformes			order			accepted			Animalia	Chordata	Actinopterygii	Amiiformes		
-1305	7ddf754f-d193-4cc9-b351-99906754a03b	8VR36			Lophiiformes		Lophiiformes	Lophiiformes			order			accepted			Animalia	Chordata	Actinopterygii	Lophiiformes		
-1107	7ddf754f-d193-4cc9-b351-99906754a03b	8VR36			Cetomimiformes		Cetomimiformes	Cetomimiformes			order			accepted			Animalia	Chordata	Actinopterygii	Cetomimiformes		
-889	7ddf754f-d193-4cc9-b351-99906754a03b	8VR36			Synbranchiformes		Synbranchiformes	Synbranchiformes			order			accepted			Animalia	Chordata	Actinopterygii	Synbranchiformes		
-547	7ddf754f-d193-4cc9-b351-99906754a03b	8VR36			Cyprinodontiformes		Cyprinodontiformes	Cyprinodontiformes			order			accepted			Animalia	Chordata	Actinopterygii	Cyprinodontiformes		
-1068	7ddf754f-d193-4cc9-b351-99906754a03b	8VR36			Osmeriformes		Osmeriformes	Osmeriformes			order			accepted			Animalia	Chordata	Actinopterygii	Osmeriformes		
+1313	7ddf754f-d193-4cc9-b351-99906754a03b	44			Salmoniformes		Salmoniformes	Salmoniformes			order			accepted			Animalia	Chordata		Salmoniformes		
+494	7ddf754f-d193-4cc9-b351-99906754a03b	44			Amiiformes		Amiiformes	Amiiformes			order			accepted			Animalia	Chordata		Amiiformes		
+1305	7ddf754f-d193-4cc9-b351-99906754a03b	44			Lophiiformes		Lophiiformes	Lophiiformes			order			accepted			Animalia	Chordata		Lophiiformes		
+1107	7ddf754f-d193-4cc9-b351-99906754a03b	44			Cetomimiformes		Cetomimiformes	Cetomimiformes			order			accepted			Animalia	Chordata		Cetomimiformes		
+889	7ddf754f-d193-4cc9-b351-99906754a03b	44			Synbranchiformes		Synbranchiformes	Synbranchiformes			order			accepted			Animalia	Chordata		Synbranchiformes		
+547	7ddf754f-d193-4cc9-b351-99906754a03b	44			Cyprinodontiformes		Cyprinodontiformes	Cyprinodontiformes			order			accepted			Animalia	Chordata		Cyprinodontiformes		
+1068	7ddf754f-d193-4cc9-b351-99906754a03b	44			Osmeriformes		Osmeriformes	Osmeriformes			order			accepted			Animalia	Chordata		Osmeriformes		
 8078984	7ddf754f-d193-4cc9-b351-99906754a03b	7190138			Nemertodermatida		Nemertodermatida	Nemertodermatida			order			accepted			Animalia	Xenacoelomorpha		Nemertodermatida		
-495	7ddf754f-d193-4cc9-b351-99906754a03b	8VR36			Anguilliformes		Anguilliformes	Anguilliformes			order			accepted			Animalia	Chordata	Actinopterygii	Anguilliformes		
-1069	7ddf754f-d193-4cc9-b351-99906754a03b	8VR36			Osteoglossiformes		Osteoglossiformes	Osteoglossiformes			order			accepted			Animalia	Chordata	Actinopterygii	Osteoglossiformes		
-1162	7ddf754f-d193-4cc9-b351-99906754a03b	8VR36			Elopiformes		Elopiformes	Elopiformes			order			accepted			Animalia	Chordata	Actinopterygii	Elopiformes		
-1312	7ddf754f-d193-4cc9-b351-99906754a03b	8VR36			Saccopharyngiformes		Saccopharyngiformes	Saccopharyngiformes			order			accepted			Animalia	Chordata	Actinopterygii	Saccopharyngiformes		
+495	7ddf754f-d193-4cc9-b351-99906754a03b	44			Anguilliformes		Anguilliformes	Anguilliformes			order			accepted			Animalia	Chordata		Anguilliformes		
+1069	7ddf754f-d193-4cc9-b351-99906754a03b	44			Osteoglossiformes		Osteoglossiformes	Osteoglossiformes			order			accepted			Animalia	Chordata		Osteoglossiformes		
+1162	7ddf754f-d193-4cc9-b351-99906754a03b	44			Elopiformes		Elopiformes	Elopiformes			order			accepted			Animalia	Chordata		Elopiformes		
+1312	7ddf754f-d193-4cc9-b351-99906754a03b	44			Saccopharyngiformes		Saccopharyngiformes	Saccopharyngiformes			order			accepted			Animalia	Chordata		Saccopharyngiformes		
 134	7ddf754f-d193-4cc9-b351-99906754a03b	14			Eutardigrada		Eutardigrada	Eutardigrada			class			accepted			Animalia	Tardigrada	Eutardigrada			
 133	7ddf754f-d193-4cc9-b351-99906754a03b	14			Mesotardigrada		Mesotardigrada	Mesotardigrada			class			accepted			Animalia	Tardigrada	Mesotardigrada			
 247	7ddf754f-d193-4cc9-b351-99906754a03b	14			Heterotardigrada		Heterotardigrada	Heterotardigrada			class			accepted			Animalia	Tardigrada	Heterotardigrada			
@@ -3834,4 +3834,3 @@ dz-edmontosaurus-a	d7dddbf4-2cf0-4f39-9b2a-bb099caae36c	dz-edmontosaurus			Edmon
 dz-ceratopsidae	d7dddbf4-2cf0-4f39-9b2a-bb099caae36c	dz-ornithopoda			Ceratopsidae		Ceratopsidae				family			accepted			Animalia	Chordata	Reptilia		Ceratopsidae	
 dz-triceratops	d7dddbf4-2cf0-4f39-9b2a-bb099caae36c	dz-ceratopsidae			Triceratops		Triceratops	Triceratops			genus			accepted			Animalia	Chordata	Reptilia		Ceratopsidae	Triceratops
 dz-triceratops-h	d7dddbf4-2cf0-4f39-9b2a-bb099caae36c	dz-triceratops			Triceratops horridus	(Marsh, 1889)	Triceratops horridus	Triceratops	horridus		species			accepted			Animalia	Chordata	Reptilia		Ceratopsidae	Triceratops
-8VR36	daacce49-b206-469b-8dc2-2257719f3afa	44			Actinopterygii		Actinopterygii	Actinopterygii			class			accepted			Animalia	Chordata	Actinopterygii			
