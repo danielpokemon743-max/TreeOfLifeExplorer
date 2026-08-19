@@ -36,6 +36,7 @@ export class TreeNode {
     this.rank       = (raw.rank || '').toLowerCase();
     this.status     = raw.status || raw.taxonomicStatus || 'accepted';
     this.vernacularName = raw.vernacularName || raw.commonName || raw.popularName || raw.vernacular_name || '';
+    this.kingdom    = (raw.kingdom || raw.kingdom_name || raw.reino || '').trim().toLowerCase();
     this.parent     = parent || raw.parent || null;
     this.parentId   = raw.parentId || raw.parent_id || raw.parentNameUsageID || null;
     this.depth      = this.parent ? this.parent.depth + 1 : 0;
@@ -47,6 +48,22 @@ export class TreeNode {
       : this.name;
     const nameLower = (lineageName || this.name).toLowerCase();
     let baseColor = null;
+
+    if (!this.kingdom) {
+      // Inferência do reino pelo nome da própria linhagem/nome (dados externos)
+      const words = [
+        this.name,
+        ...(raw.lineage || []).map(l => String(l.name || ''))
+      ].join(' ').toLowerCase();
+      if (words.includes('animalia')) this.kingdom = 'animalia';
+      else if (words.includes('viridiplantae')) this.kingdom = 'plantae';
+      else if (words.includes('plantae')) this.kingdom = 'plantae';
+      else if (words.includes('fungi')) this.kingdom = 'fungi';
+      else if (words.includes('archaea')) this.kingdom = 'archaea';
+      else if (words.includes('bacteria')) this.kingdom = 'bacteria';
+      else if (words.includes('protozoa') || words.includes('protista')) this.kingdom = 'protozoa';
+      else if (words.includes('chromista')) this.kingdom = 'chromista';
+    }
 
     if (nameLower.includes('animalia') || nameLower.includes('metazoa')) baseColor = '#3498DB';
     else if (nameLower.includes('plantae') || nameLower.includes('viridiplantae')) baseColor = '#27AE60';
