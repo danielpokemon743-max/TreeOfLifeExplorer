@@ -444,7 +444,7 @@ export async function initChat() {
     const target = { uid: msg.dataset.uid, ip: msg.dataset.ip, nick: msg.dataset.nick };
     switch (btn.dataset.act) {
       case 'report': doReport(target.nick, target.uid); break;
-      case 'history': openUserHistory(target.nick, target.uid); break;
+      case 'history': openUserHistory(target.uid, target.nick); break;
       case 'ban': doBanAccount(target.uid); break;
       case 'banip': if (target.ip) doBanIp(target.ip); break;
     }
