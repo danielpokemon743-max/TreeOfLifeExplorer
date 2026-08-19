@@ -62,10 +62,20 @@ export function closeChat(silent = false) {
   hideContextMenu();
 }
 
+async function refreshAdminFlag() {
+  try {
+    const check = await fetchAdminCheck();
+    _admin = !!(check && check.is_admin);
+  } catch {
+    _admin = false;
+  }
+}
+
 function openChat() {
   _open = true;
   const p = parts();
   if (!p.panel) return;
+  refreshAdminFlag();
   openModal(p.panel, 'open');
   loadMessages();
   startPoll();
@@ -80,6 +90,7 @@ function toggleChat() {
 function startPoll() {
   stopPoll();
   pollInboxBadge();
+  refreshAdminFlag();
   _pollTimer = setInterval(() => {
     if (!_open) return;
     if (_tab === 'inbox') loadInbox();
@@ -248,12 +259,22 @@ function renderMessages(data) {
     const flag = esc(m.flag || '');
     const nick = esc(m.nick || 'Sem nick');
     const ipAttr = m.ip ? ` data-ip="${esc(m.ip)}"` : '';
+    let actions = '';
+    const logged = !!getAuthToken();
+    if (_admin) {
+      actions = '<span class="chat-act" data-act="history" title="Ver histórico de mensagens" role="button" tabindex="0">📜</span>' +
+        '<span class="chat-act" data-act="ban" title="Banir conta" role="button" tabindex="0">🚫</span>' +
+        (m.ip ? '<span class="chat-act" data-act="banip" title="Banir IP" role="button" tabindex="0">🌐</span>' : '');
+    } else if (logged) {
+      actions = '<span class="chat-act" data-act="report" title="Solicitar banimento" role="button" tabindex="0">🚨</span>';
+    }
     return (
       '<div class="chat-msg' + mine + rankClass + '" data-uid="' + esc(m.user_id) + '" data-nick="' + esc(m.nick || '') + '"' + ipAttr + '>' +
         '<div class="chat-msg-hdr">' +
           '<span class="chat-avatar">' + esc((m.nick || '?')[0] || '?') + '</span>' +
           '<span class="chat-nick">' + flag + ' ' + nick + '<span class="chat-medal" title="Top ' + m.top_rank + ' do ranking">' + medal + '</span>' + adminBadge + '</span>' +
           '<span class="chat-meta">Lv ' + esc(m.level) + ' · ' + esc(fmtHours(m.hours)) + '</span>' +
+          actions +
         '</div>' +
         '<div class="chat-bubble">' + esc(m.content) + '</div>' +
         '<div class="chat-time">' + fmtTime(m.created_at) + '</div>' +
@@ -403,13 +424,30 @@ export async function initChat() {
   if (p.input) p.input.addEventListener('keydown', ev => { if (ev.key === 'Enter') sendMessage(); });
   p.tabs.forEach(t => t.addEventListener('click', () => switchTab(t.dataset.channel)));
 
-  // Botão direito em uma mensagem → menu do admin
+  // Botão direito em uma mensagem → menu
   p.list.addEventListener('contextmenu', ev => {
     const msg = ev.target.closest('.chat-msg');
     if (!msg) return;
     ev.preventDefault();
     hideContextMenu();
     openContextMenu(ev.pageX, ev.pageY, { uid: msg.dataset.uid, ip: msg.dataset.ip, nick: msg.dataset.nick });
+  });
+
+  // Botões de ação por mensagem (🚨 denunciar / 📜 histórico / 🚫 banir)
+  p.list.addEventListener('click', ev => {
+    const btn = ev.target.closest('.chat-act');
+    const msg = ev.target.closest('.chat-msg');
+    if (!btn || !msg) return;
+    ev.preventDefault();
+    ev.stopPropagation();
+    hideContextMenu();
+    const target = { uid: msg.dataset.uid, ip: msg.dataset.ip, nick: msg.dataset.nick };
+    switch (btn.dataset.act) {
+      case 'report': doReport(target.nick, target.uid); break;
+      case 'history': openUserHistory(target.nick, target.uid); break;
+      case 'ban': doBanAccount(target.uid); break;
+      case 'banip': if (target.ip) doBanIp(target.ip); break;
+    }
   });
 
   // Fechar ao clicar fora ou pressionar Esc
