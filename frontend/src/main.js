@@ -173,18 +173,52 @@ let _isAdminUser = false;
 // ─── ESTADO GLOBAL ───────────────────────────────────────────────────────────
 // Palavras bloqueadas em nicks (mesma lógica do backend)
 const BANNED_NICKWORDS = [
-  'puta','puto','porra','caralho','foda','foder','merda','bosta','cagar','cacete',
-  'piroca','buceta','xota','arrombado','arrombada','viado','bixa','pederasta',
-  'escroto','idiota','macaco','negrada','crioulo','nazista','hitler','nazi',
-  '20comer70correr','carai','tung','sahur',
-  'filhodaputa','filha da puta','fdp','ku klux','kllux','vai tomar no cu',
-  'vtnc','ptnc','pqp','tnc','sequestr','sequestro','trafica','genocida','pedofil','pedofilo','estuprad','estuprador','suicid','suicida',
-  'six seven',
-  'fuck','fucking','shit','bitch','dick','cock','pussy','asshole','nigger',
-  'faggot','retard','rape','rapist','murder'
+  // Português — xingamentos/insultos
+  'puta','puto','putaria','porra','caralho','carai','caraio','foda','foder','fude','fudid',
+  'merda','bosta','bost','cagar','cagad','cagao','cagona','cacete','cacet','piroca','buceta',
+  'bucetinha','xota','xoxota','xereca','pepeca','ppk','bilola','piru','punheta','arrombado',
+  'arrombada','arromb','viado','viadao','viadagem','viadinh','bixa','bicha','bichas','pederasta',
+  'escroto','escrot','idiota','imbecil','imbeci','otario','otaria','burro','burra','estupid',
+  'cretino','cretin','ignorant','babaca','babaquinha','canalha','palhac','trouxa','pilantra',
+  'semvergonha','sem-vergonha','safado','safada','vagabund','prostitut',
+  'maconheir','cracud','desgrac','fedid','fedorent','nojento','nojenta','nojent','asqueros',
+  'cachaceir','bocarra','corno','cornudo','chifrud','maluq','maluco','maluca','maluquinho',
+  'verme','escoria','lixo humano','monstro','aberrac','aleijad','mongol','mongoloide',
+  // Português — ofensas a grupos/ódio
+  'nazista','nazi','hitler','holoca','racist','racismo','racista','homofob','xenofob',
+  'fascist','fascis','supremac','skinhead','whitepower','white power','ku klux','kllux',
+  'kuklux','negrada','crioulo','criola','macaco','macaca','favelad','favelada','cafezin',
+  'preto vagabundo',
+  // Português — crimes/sexual
+  'estuprad','estuprador','estupro','pedofil','pedofilo','genocid','genocida','sequestr',
+  'sequestro','sequestrad','trafica','trafico','trafi','traficant','traficante','suicid',
+  'suicida','tortur','tortura','terror','terrorist','explorac','assassin','assassino',
+  'esfaque','decepa','carboniz','machad','20comer70correr','six seven','6seven',
+  // Português — siglas e abreviações
+  'fdp','vtnc','ptnc','pqp','tnc','vsf','vdm','krl','krlh','kct','kcth','crl','crlh',
+  'tung','sahur','tungtungsahur','vai tomar no cu',
+  // Composições e variações leetspeak
+  'filhodaputa','filha da puta','filhodeuma','p0rra','p0rr4','p0r4','c4r4lh0','caralh0',
+  'c4ralho','m3rd4','m3rda','m3rd','b0st4','b0sta','f0d4','f0da','f0der','f0d3r','f0dida',
+  'f4ck','fvck','fuk','fuq','phuck','fuxk','fck','5hit','sh1t','sh17','b1tch','b1ch',
+  'd1ck','d1k','c0ck','c0k','p4ssy','puss1','a55hole','a55 hol','n1gger','n1gg3r','nigg4',
+  'f4ggot','r4pe','r4p1st','naz1','wh0re','cun7','cu7','cuzao','cuzona','cuzinho','cuzin',
+  'vcq','sua mae',
+  // Inglês — xingamentos
+  'fuck','fucking','fucker','motherfuck','shit','shite','bitch','bastard','bollocks',
+  'dick','dickhead','cock','cocksuck','pussy','asshole','arsehole','nigger','nigga',
+  'faggot','fagot','retard','retarted','rape','rapist','murder','slut','whore',
+  'twat','wanker','wank','prick','suck my','eat shit','cunt','pervert','perv',
+  'bimbo','douche','loser','moron','stupid','idiot','tranny','tramry','kkk',
 ];
 // Palavras curtas/ambíguas: só barram como palavra inteira (ex.: "pau" não barra "paulo")
-const NICK_BOUNDARY_WORDS = ['pau','cu','rola','sex','sexual','kill','sixseven','penis','kkk','tungtungsahur'];
+const NICK_BOUNDARY_WORDS = [
+  'pau','cu','rola','sex','sexual','sexo','kill','sixseven','penis',
+  'kkk','k3k','tungtungsahur','ass','fag','fds','cuz','cuzin','pus','piss',
+  'fck','fuk','fuq','c0ck','prrrr',
+];
+// Sequências de 'k' repetido (kkkk...) usadas para zombar/referenciar o KKK
+const _K_RUN_REGEX = /(?:^|[^a-z0-9])(k{3,})(?:$|[^a-z0-9])/i;
 function _normNick(text) {
   return (text || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
 }
@@ -198,7 +232,7 @@ function _nickIsBlocked(nick) {
   if (!_nickBlockRegex) {
     _nickBlockRegex = new RegExp(`(?:^|[^a-z0-9])(${NICK_BOUNDARY_WORDS.map(escapeRegex).join('|')})(?:$|[^a-z0-9])`);
   }
-  return BANNED_NICKWORDS.some(w => norm.includes(w)) || _nickBlockRegex.test(norm);
+  return BANNED_NICKWORDS.some(w => norm.includes(w)) || _nickBlockRegex.test(norm) || _K_RUN_REGEX.test(norm);
 }
 let renderer;
 let rootNode = null;
