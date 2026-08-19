@@ -2933,17 +2933,79 @@ function updateStats() {
   if (!renderer) return;
   const count = window.allTreeNodes ? window.allTreeNodes.length : 0;
   const formattedCount = count.toLocaleString('pt-BR');
- 
+
   if (statsCount) statsCount.textContent = formattedCount;
   const miniCount = document.getElementById('mini-count');
   if (miniCount) miniCount.textContent = formattedCount;
- 
+
   if (statsBar) {
     const pct = Math.min(100, (count / 2500) * 100);
     statsBar.style.width = `${pct}%`;
   }
+
+  renderKingdomChart();
 }
 setInterval(updateStats, 1000);
+
+// ─── Gráfico de Seres por Reino (tempo real) ────────────────────────────────
+const KINGDOM_COLORS = {
+  archaea: '#f39c12',
+  bacteria: '#9b59b6',
+  animalia: '#2ecc71',
+  fungi: '#e74c3c',
+  plantae: '#27ae60',
+  protozoa: '#3498db',
+  chromista: '#1abc9c',
+  viruses: '#e67e22',
+};
+let _kingdomChartKey = '';
+
+function kingdomCounts() {
+  const counts = new Map();
+  const nodes = window.allTreeNodes || [];
+  for (const n of nodes) {
+    const k = (n.kingdom || '').trim().toLowerCase();
+    if (!k) continue;
+    counts.set(k, (counts.get(k) || 0) + 1);
+  }
+  return counts;
+}
+
+function renderKingdomChart() {
+  const chart = document.getElementById('kingdom-chart');
+  if (!chart) return;
+  const counts = kingdomCounts();
+  const sorted = [...counts.entries()].sort((a, b) => b[1] - a[1]);
+  const key = sorted.map(([k, v]) => k + ':' + v).join('|');
+  if (key === _kingdomChartKey) return;
+  _kingdomChartKey = key;
+
+  const total = sorted.reduce((s, [, v]) => s + v, 0);
+  const max = sorted.length ? sorted[0][1] : 1;
+  if (!sorted.length) {
+    chart.innerHTML = '<p class="kingdom-empty">Carregando táxons…</p>';
+    return;
+  }
+
+  chart.innerHTML = sorted.map(([k, v]) => {
+    const color = KINGDOM_COLORS[k] || '#7f8c8d';
+    const pct = total ? Math.round((v / total) * 100) : 0;
+    const width = Math.round((v / max) * 100);
+    const label = k.charAt(0).toUpperCase() + k.slice(1);
+    const title = `${label}: ${v.toLocaleString('pt-BR')} táxons`;
+    return (
+      '<div class="kingdom-row" title="' + esc(title) + '">' +
+        '<div class="kingdom-row-head">' +
+          '<span class="kingdom-row-name">' + esc(label) + '</span>' +
+          '<span class="kingdom-row-count">' + v.toLocaleString('pt-BR') + ' · ' + pct + '%</span>' +
+        '</div>' +
+        '<div class="kingdom-bar-wrap">' +
+          '<div class="kingdom-bar" style="width:' + width + '%; background:' + color + ';"></div>' +
+        '</div>' +
+      '</div>'
+    );
+  }).join('');
+}
  
 // ─── PROGRESSO E AUTENTICAÇÃO (PASSKEY) ──────────────────────────────────────
 async function updateAuthUI() {
