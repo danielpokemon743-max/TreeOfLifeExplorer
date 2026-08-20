@@ -705,8 +705,19 @@ export function resolveBanRequest(requestId, outcome) {
   });
 }
 
-export function fetchUserChatHistory(userId) {
-  return _mod(true, `${ADMIN_BASE}/users/${encodeURIComponent(userId)}/messages`);
+export async function fetchUserChatHistory(userId) {
+  const token = getAuthToken();
+  if (!token) return { ok: false, detail: 'Não autenticado' };
+  try {
+    const res = await fetchWithTimeout(`${ADMIN_BASE}/users/${encodeURIComponent(userId)}/messages`, {
+      headers: { 'Authorization': `Bearer ${token}` },
+      cache: 'no-store',
+    });
+    const body = await res.json().catch(() => ({}));
+    return { ok: res.ok, status: res.status, detail: body.detail || '', ...body };
+  } catch {
+    return { ok: false, detail: 'Erro de rede' };
+  }
 }
 
 export function fetchInbox() {
