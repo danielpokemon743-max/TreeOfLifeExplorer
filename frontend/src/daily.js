@@ -5,10 +5,13 @@
 
 import { openModal, closeModal } from './fx.js';
 
-const DAY_MS = 86400000;
+// Persistência da escolha do dia (garante troca diária e estabilidade no mesmo dia).
+const STORAGE_KEY = 'tol_daily_species_v2';
 
+// Índice do dia local (muda à meia-noite do relógio do usuário, não em UTC).
 function dayIndex() {
-  return Math.floor(Date.now() / DAY_MS);
+  const d = new Date();
+  return d.getFullYear() * 10000 + (d.getMonth() + 1) * 100 + d.getDate();
 }
 
 // ─── ESPÉCIES DO DIA ─────────────────────────────────────────────────────────
@@ -473,7 +476,8 @@ function buildPool(getLocalPool) {
 
 // Encontra o próximo candidato válido: com imagem, descrição e linhagem.
 // cursorHint: índice do último ancorado; null = começa no "dia" (determinístico).
-async function pickValid(getLocalPool, cursorHint) {
+// avoidName: nome a ignorar (ex.: o de ontem) para garantir que mude todo dia.
+async function pickValid(getLocalPool, cursorHint, avoidName) {
   const pool = buildPool(getLocalPool);
   if (pool.length === 0) return null;
 
@@ -484,11 +488,13 @@ async function pickValid(getLocalPool, cursorHint) {
     idx = (cursorHint + 1) % pool.length; // avança para não repetir
   }
 
+  const skipName = avoidName ? normalizeStr(avoidName) : null;
   const MAX_TRIES = Math.min(40, pool.length);
   for (let tries = 0; tries < MAX_TRIES; tries++) {
     const cand = pool[idx];
     const pickIdx = idx;
     idx = (idx + 1) % pool.length;
+    if (skipName && normalizeStr(cand.name) === skipName) continue;
     const data = await fetchWikiSummary(cand.wikiTitle || cand.name);
     if (data && data.extract && data.extract.trim()) {
       const img = data?.thumbnail?.source || data?.originalimage?.source || '';
@@ -528,7 +534,6 @@ export async function initDailyModule({ onExplore, getLocalPool }) {
   if (!modal || !openBtn) return;
 
   let currentSpecies = null;
-  let cursorHint = null;
   let loading = false;
 
   openBtn.addEventListener('click', () => {
@@ -564,7 +569,35 @@ export async function initDailyModule({ onExplore, getLocalPool }) {
     if (speciesSource) speciesSource.textContent = '';
     if (curiosityText) curiosityText.textContent = getCuriosityOfDay();
 
-    const pick = await pickValid(getLocalPool, forceSwap ? cursorHint : null);
+    const today = dayIndex();
+    let stored = null;
+    try { stored = JSON.parse(localStorage.getItem(STORAGE_KEY)) || null; } catch (e) { stored = null; }
+
+    let pick = null;
+
+    // Mesmo dia: reaproveita a espécie já escolhida hoje (estável ao reabrir).
+    if (!forceSwap && stored && stored.day === today && stored.name) {
+      const pool = buildPool(getLocalPool);
+      const sp = pool.find(s => s.name === stored.name);
+      if (sp) {
+        const data = await fetchWikiSummary(sp.wikiTitle || sp.name);
+        if (data && data.extract && data.extract.trim()) {
+          pick = { sp, data, idx: stored.idx };
+        }
+      }
+    }
+
+    if (!pick) {
+      const hint = (stored && typeof stored.idx === 'number') ? stored.idx : null;
+      pick = await pickValid(getLocalPool, hint, stored ? stored.name : null);
+    }
+
+    if (pick) {
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify({ day: today, idx: pick.idx, name: pick.sp.name }));
+      } catch (e) { /* sem storage */ }
+    }
+
     loading = false;
     if (nextBtn) nextBtn.disabled = false;
 
@@ -578,7 +611,6 @@ export async function initDailyModule({ onExplore, getLocalPool }) {
     const sp = pick.sp;
     const data = pick.data;
     currentSpecies = sp;
-    cursorHint = pick.idx;
 
     if (speciesName) speciesName.textContent = sp.name;
     if (speciesLineage) {
