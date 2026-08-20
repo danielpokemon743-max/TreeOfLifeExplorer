@@ -374,6 +374,8 @@ export class TreeRenderer {
     // (fetchAndInsertExternalTaxon/focusOnNode marcam loaded=true). Sem esta
     // checagem eles nunca buscariam os filhos reais no OpenTree.
     if (node.loaded && !force && node.children.length > 0) return;
+    // Evita re-consultar APIs repetidamente para nós sem filhos
+    if (!force && node._noChildrenUntil && Date.now() < node._noChildrenUntil) return;
     node.loading = true;
  
     let raw = null;
@@ -400,6 +402,13 @@ export class TreeRenderer {
       }
       node.loading = false;
       node.loaded  = true;
+      if (node.rank !== 'species' && node.rank !== 'subspecies' && node.children.length === 0) {
+        // sem feedback das fontes → avisa e evita re-consultar a API a cada clique
+        if (typeof window.notifyNoChildren === 'function') {
+          window.notifyNoChildren(node, 'sem filhos em OpenTree e Catalogue of Life');
+        }
+        node._noChildrenUntil = Date.now() + 120000;
+      }
       return;
     }
  

@@ -1198,6 +1198,7 @@ async function fetchExternalChildren(node) {
       node._externalLoaded = true;
       node.loaded = true;
       node._externalLoading = false;
+      notifyNoChildren(node, 'nome não encontrado na Catalogue of Life');
       return;
     }
 
@@ -1235,6 +1236,7 @@ async function fetchExternalChildren(node) {
       node._externalLoaded = true;
       node.loaded = true;
       node._externalLoading = false;
+      notifyNoChildren(node, 'identificador indisponível na Catalogue of Life');
       return;
     }
 
@@ -1253,6 +1255,7 @@ async function fetchExternalChildren(node) {
       node._externalLoaded = true;
       node.loaded = true;
       node._externalLoading = false;
+      notifyNoChildren(node, 'sem filhos na Catalogue of Life');
       return;
     }
 
@@ -1313,6 +1316,10 @@ async function fetchExternalChildren(node) {
     node.loaded = true;
     node.expanded = true;
     node._externalLoading = false;
+
+    if (addedCount === 0) {
+      notifyNoChildren(node, 'filhos encontrados, mas todos já presentes ou inválidos');
+    }
 
     if (addedCount > 0 && renderer) {
       if (typeof renderer._recomputeLayout === 'function') renderer._recomputeLayout();
@@ -3360,21 +3367,41 @@ if (closeInfoBtn) {
 }
  
 // ─── NOTIFICAÇÃO DE CONQUISTA ────────────────────────────────────────────────
-function showAchievementNotification(code, name, description) {
-  sounds.playSFX('achievement');
+function showInfoNotification(title, description, ms = 5000) {
   if (notifToast) {
     const titleEl = document.getElementById('notif-ach-title');
     const descEl = document.getElementById('notif-ach-desc');
-    if (titleEl) titleEl.textContent = `🏆 ${name}`;
+    if (titleEl) titleEl.textContent = title;
     if (descEl) descEl.textContent = description || '';
     notifToast.classList.remove('hidden');
     notifToast.classList.add('visible');
     setTimeout(() => {
       notifToast.classList.remove('visible');
       notifToast.classList.add('hidden');
-    }, 5000);
+    }, ms);
   }
 }
+
+function showAchievementNotification(code, name, description) {
+  sounds.playSFX('achievement');
+  showInfoNotification(`🏆 ${name}`, description);
+}
+
+// Feedback quando um táxon não tem filhos nas fontes consultadas
+let _noChildrenToast = 0;
+function notifyNoChildren(node, reason) {
+  const now = Date.now();
+  if (now - _noChildrenToast < 4000) return; // evita spam
+  _noChildrenToast = now;
+  const name = node && node.name ? node.name : 'este táxon';
+  console.warn(`Expandir "${name}": ${reason}`);
+  showInfoNotification(
+    '🔍 Nenhum táxon filho encontrado',
+    `"${name}" não possui filhos nas fontes consultadas (${reason}).`,
+    4000
+  );
+}
+window.notifyNoChildren = notifyNoChildren;
 
 
 document.addEventListener('DOMContentLoaded', () => {
