@@ -1171,6 +1171,78 @@ function notifyExternalApiDown(node) {
   showAchievementNotification('', '🌐 Sem conexão com a internet', `Não foi possível carregar os táxons de "${name}". Clique novamente em instantes.`);
 }
 
+// Carrega filhos diretos do GBIF backbone (os taxonID da árvore local são chaves GBIF).
+// Retorna quantos filhos foram adicionados (0 se não encontrou/não é chave GBIF).
+async function fetchGbifChildren(node) {
+  const id = String(node.id || '');
+  if (!/^\d+$/.test(id)) return 0; // não é uma chave GBIF numérica
+  try {
+    const res = await fetch(`https://api.gbif.org/v1/species/${id}/children?limit=100`);
+    if (!res.ok) {
+      console.warn(`[GBIF] children indisponível para "${node.name}" (key ${id}): HTTP ${res.status}`);
+      return 0;
+    }
+    const data = await res.json();
+    const results = data.results;
+    if (!results || !Array.isArray(results) || results.length === 0) {
+      return 0;
+    }
+    if (!node.children) node.children = [];
+    let addedCount = 0;
+    for (const child of results) {
+      const childName = child.scientificName || child.vernacularName;
+      if (!childName || !isBiologicalName(childName)) continue;
+
+      const normChild = normalizeStr(childName);
+      const exists = node.children.some(c =>
+        String(c.id) === String(child.key) || (c.name && normalizeStr(c.name) === normChild)
+      );
+      if (exists) continue;
+
+      const childRank = child.taxonRank ? String(child.taxonRank).toLowerCase() : 'species';
+      const pIdx = getRankIndex(node.rank);
+      const cIdx = getRankIndex(childRank);
+      if (pIdx !== -1 && cIdx !== -1 && cIdx <= pIdx) {
+        console.warn(`Validação: filho GBIF "${childName}" (${childRank}) ignorado — rank incompatível com pai "${node.name}" (${node.rank})`);
+        continue;
+      }
+
+      const gKey = String(child.key || '');
+      const newNode = new TreeNode({
+        id: gKey,
+        colId: child.colID || gKey,
+        name: childName,
+        canonicalName: child.canonicalName || childName,
+        scientificName: childName,
+        vernacularName: child.vernacularName || '',
+        rank: childRank,
+        status: child.taxonomicStatus || 'accepted',
+        parentId: id,
+        parent: node,
+        children: [],
+        _source: 'gbif',
+        lineage: [...(node.lineage || []), { id: gKey, name: childName, rank: childRank }]
+      });
+
+      node.children.push(newNode);
+      if (!window.allTreeNodes.includes(newNode)) {
+        window.allTreeNodes.push(newNode);
+      }
+      if (!window._nodeById.has(gKey)) {
+        window._nodeById.set(gKey, newNode);
+      }
+      addedCount++;
+    }
+    if (addedCount > 0) {
+      return addedCount;
+    }
+    return 0;
+  } catch (err) {
+    console.warn(`[GBIF] erro ao carregar filhos de "${node.name}":`, err);
+    return 0;
+  }
+}
+
 async function fetchExternalChildren(node) {
   if (!node || !node.name || node._externalLoaded || node._externalLoading) return;
   node._externalLoading = true;
@@ -1182,8 +1254,19 @@ async function fetchExternalChildren(node) {
   }
  
   try {
-    const searchRes = await fetch(`https://api.checklistbank.org/dataset/3LR/nameusage/search?q=${encodeURIComponent(node.name)}&limit=8`);
+    // 1) GBIF backbone: os taxonID da árvore local SÃO chaves GBIF, que
+    // contém muitos táxons ausentes da OpenTree/COL (ex.: bactérias novas).
+    const gbifAdded = await fetchGbifChildren(node);
+    if (gbifAdded > 0) {
+      node._externalLoaded = true;
+      node.loaded = true;
+      node.expanded = true;
+      node._externalLoading = false;
+      return;
+    }
 
+    // 2) Catalogue of Life (busca direta pelo nome)
+    const searchRes = await fetch(`https://api.checklistbank.org/dataset/3LR/nameusage/search?q=${encodeURIComponent(node.name)}&limit=8`);
     if (!searchRes.ok) {
       node._externalLoaded = false; // permite tentar de novo em outro clique
       node.loaded = true;
