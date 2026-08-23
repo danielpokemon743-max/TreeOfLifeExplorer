@@ -36,6 +36,8 @@ function _childKey(c) {
 function _mergeChildren(node, incoming) {
   const existing = new Map(node.children.map(c => [_childKey(c), c]));
   const names = new Set(node.children.map(c => (c.name || '').toLowerCase()));
+  const allNodes = (typeof window !== 'undefined' && Array.isArray(window.allTreeNodes)) ? window.allTreeNodes : null;
+  const nodeById = (typeof window !== 'undefined' && window._nodeById && typeof window._nodeById.get === 'function') ? window._nodeById : null;
   for (const c of incoming) {
     const k = _childKey(c);
     const nm = (c.name || '').toLowerCase();
@@ -45,6 +47,10 @@ function _mergeChildren(node, incoming) {
     existing.set(k, c);
     names.add(nm);
     node.children.push(c);
+    // Registra no índice global para que a busca exata (findNodeInLocalData)
+    // e o autocomplete encontrem o mesmo nó (antes só a árvore o tinha).
+    if (allNodes && !allNodes.includes(c)) allNodes.push(c);
+    if (nodeById && c.id) nodeById.set(String(c.id), c);
   }
   node.children.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
 }
