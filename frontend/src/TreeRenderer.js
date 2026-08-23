@@ -573,7 +573,12 @@ export class TreeRenderer {
  
       const isKingdomOrDomain = ['life', 'domain', 'kingdom'].includes(n.rank);
       const isMajorRank = ['phylum', 'class', 'order'].includes(n.rank);
-      const shouldShowLabel = isKingdomOrDomain || (scale > 0.25 && (n.expanded || n.selected || isMajorRank));
+      // Ao dar zoom, revela o nome de QUALQUER táxon visível (não só os
+      // expandidos/selecionados/rank superior) — antes, gêneros e espécies
+      // recolhidos não mostravam o rótulo nem com zoom.
+      const zoomedIn = scale >= 0.6;
+      const shouldShowLabel = isKingdomOrDomain || zoomedIn ||
+        (scale > 0.25 && (n.expanded || n.selected || isMajorRank));
  
       if (shouldShowLabel) {
         const textObj = new PIXI.Text(n.name, {
