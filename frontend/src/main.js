@@ -1881,7 +1881,7 @@ export async function executeSearch(queryText) {
     while (anc) {
       if (rendererInstance && typeof rendererInstance._loadChildren === 'function') {
         try {
-          await rendererInstance._loadChildren(anc, anc._source === 'api');
+          await rendererInstance._loadChildren(anc, true);
         } catch (e) { /* ignora falha de uma fonte e segue */ }
         anc.expanded = true;
       }

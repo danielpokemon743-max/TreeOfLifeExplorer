@@ -373,11 +373,20 @@ export class TreeRenderer {
     // Nó marcado como expandido mas cujos filhos são só a cadeia COL parcial
     // (criados pela busca, sem ott_id). Em vez de colapsar, carrega do OpenTree.
     const hasRealChildren = node.children.some(c => c.ott_id);
+    // Gêneros, famílias etc. sempre buscam a largura completa (OpenTree/COL),
+    // mesmo quando já têm filhos locais — assim clicar em "Homo" mostra todas
+    // as espécies de Homo, não só a que foi pesquisada.
+    const wantBreadth = node.rank !== 'species' && node.rank !== 'subspecies';
 
     if (node.expanded) {
       // Não colapsa um ancestral do nó em foco (ex.: clicar em "Homo" não
-      // deve fechar a "Homo sapiens" que foi pesquisada).
+      // deve fechar a "Homo sapiens" que foi pesquisada). Garante ainda assim
+      // que os filhos (irmãos) estejam carregados em largura.
       if (this._focusedNode && this._focusedNode !== node && this._contains(node, this._focusedNode)) {
+        if (wantBreadth) {
+          try { await this._loadChildren(node, true); } catch (e) { /* ignora */ }
+        }
+        node.expanded = true;
         this._recomputeLayout();
         this._requestRender();
         return;
@@ -396,11 +405,10 @@ export class TreeRenderer {
       this._requestRender();
       return;
     }
- 
-    // Nós criados pela busca externa (COL) têm _source='api' e seus filhos
-    // vêm apenas da cadeia de classificação (parciais). Ao expandir, força a
-    // busca real no OpenTree para obter os filhos completos.
-    await this._loadChildren(node, node._source === 'api');
+  
+    // Ao expandir, força a busca dos filhos completos (não só a cadeia da
+    // busca) para nós externos ou nós que podem ter mais filhos em largura.
+    await this._loadChildren(node, node._source === 'api' || wantBreadth);
     if (node.children.length > 0) node.expanded = true;
     this._recomputeLayout();
     this._requestRender();
