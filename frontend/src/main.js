@@ -1904,6 +1904,36 @@ export async function executeSearch(queryText) {
   }
 }
  
+// Busca ao vivo no Catalogue of Life para sugerir táxons que ainda não
+// estão na árvore local (ex.: espécies só existentes via API).
+async function fetchApiSuggestions(query) {
+  try {
+    const res = await fetch(`https://api.checklistbank.org/dataset/3LR/nameusage/search?q=${encodeURIComponent(query)}&limit=8`);
+    if (!res.ok) return [];
+    const data = await res.json();
+    const results = data && Array.isArray(data.result) ? data.result : [];
+    const out = [];
+    const seen = new Set();
+    for (const r of results) {
+      const usage = r.usage || {};
+      const sciName = usage.scientificName || usage.name || r.name || '';
+      if (!sciName || !isBiologicalName(sciName)) continue;
+      const norm = normalizeStr(sciName);
+      if (seen.has(norm)) continue;
+      seen.add(norm);
+      out.push({
+        name: sciName,
+        rank: String(usage.rank || r.rank || '').toLowerCase(),
+        _source: 'api',
+        commonName: '', popularName: '', vernacularName: ''
+      });
+    }
+    return out;
+  } catch (e) {
+    return [];
+  }
+}
+
 function getAutocompleteMatches(query, currentNode, matches = [], maxResults = 6) {
   if (!currentNode || !query || matches.length >= maxResults) return matches;
   const target = normalizeStr(query.trim());
@@ -2009,6 +2039,8 @@ function highlightAutocompleteItem(items) {
   });
 }
  
+let _acTimer = null;
+
 export function initSearchModule(renderer, rootNode) {
   rendererInstance = renderer;
   rootNodeInstance = rootNode;
@@ -2020,9 +2052,26 @@ export function initSearchModule(renderer, rootNode) {
     inputEl.addEventListener('input', (e) => {
       const text = e.target.value;
       if (text.trim().length >= 2 && rootNodeInstance) {
-        const matches = getAutocompleteMatches(text, rootNodeInstance, [], 6);
-        renderAutocompleteList(matches);
+        const local = getAutocompleteMatches(text, rootNodeInstance, [], 6);
+        renderAutocompleteList(local);
+
+        // Aprimora com sugestões da API (catálogo) depois de uma pausa.
+        clearTimeout(_acTimer);
+        _acTimer = setTimeout(async () => {
+          const cur = inputEl.value.trim();
+          if (cur !== text.trim()) return; // entrada obsoleta
+          const api = await fetchApiSuggestions(cur);
+          if (inputEl.value.trim() !== cur) return; // mudou de novo
+          const seen = new Set(local.map(m => normalizeStr(m.name)));
+          const combined = local.slice();
+          for (const a of api) {
+            const nm = normalizeStr(a.name);
+            if (!seen.has(nm)) { combined.push(a); seen.add(nm); }
+          }
+          renderAutocompleteList(combined.slice(0, 10));
+        }, 350);
       } else {
+        clearTimeout(_acTimer);
         closeAutocomplete();
       }
     });
