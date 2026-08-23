@@ -35,12 +35,16 @@ function _childKey(c) {
 // classificação da busca e evita duplicatas ao reexpandir).
 function _mergeChildren(node, incoming) {
   const existing = new Map(node.children.map(c => [_childKey(c), c]));
+  const names = new Set(node.children.map(c => (c.name || '').toLowerCase()));
   for (const c of incoming) {
     const k = _childKey(c);
-    if (!existing.has(k)) {
-      existing.set(k, c);
-      node.children.push(c);
-    }
+    const nm = (c.name || '').toLowerCase();
+    // deduz tanto por chave exata quanto por nome (irmãos com mesmo nome,
+    // ex.: nó local + nó OpenTree da mesma espécie, são a mesma entrada)
+    if (existing.has(k) || names.has(nm)) continue;
+    existing.set(k, c);
+    names.add(nm);
+    node.children.push(c);
   }
   node.children.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
 }
