@@ -25,6 +25,25 @@ function parseColorHex(colorStr) {
   if (typeof colorStr === 'number') return colorStr;
   return parseInt(String(colorStr).replace('#', ''), 16) || 0x34495e;
 }
+
+// Chave estável para deduplicar filhos (nome + ott_id/id)
+function _childKey(c) {
+  return (c.name || '').toLowerCase() + '|' + (c.ott_id ?? c.id ?? '');
+}
+
+// Adiciona filhos novos sem remover os já existentes (preserva a cadeia de
+// classificação da busca e evita duplicatas ao reexpandir).
+function _mergeChildren(node, incoming) {
+  const existing = new Map(node.children.map(c => [_childKey(c), c]));
+  for (const c of incoming) {
+    const k = _childKey(c);
+    if (!existing.has(k)) {
+      existing.set(k, c);
+      node.children.push(c);
+    }
+  }
+  node.children.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+}
  
 export class TreeNode {
   constructor(raw, parent = null) {
@@ -212,7 +231,8 @@ export class TreeRenderer {
   // ⚡ FOCO DA CÂMERA GARANTIDO NO TÁXON PESQUISADO
   focusOnNode(node, targetScale = 1.4) {
     if (!node) return;
- 
+    this._focusedNode = node;
+
     // 1. Garante que o nó e TODOS os seus pais estejam marcados como expandidos
     let curr = node;
     while (curr) {
@@ -336,7 +356,17 @@ export class TreeRenderer {
       }
     }
   }
- 
+  
+  // Verifica se `target` está na subárvore de `node` (target é nó ou descendente).
+  _contains(node, target) {
+    let cur = target;
+    while (cur) {
+      if (cur === node) return true;
+      cur = cur.parent;
+    }
+    return false;
+  }
+  
   async expandNode(node) {
     if (node.loading) return;
 
@@ -345,6 +375,13 @@ export class TreeRenderer {
     const hasRealChildren = node.children.some(c => c.ott_id);
 
     if (node.expanded) {
+      // Não colapsa um ancestral do nó em foco (ex.: clicar em "Homo" não
+      // deve fechar a "Homo sapiens" que foi pesquisada).
+      if (this._focusedNode && this._focusedNode !== node && this._contains(node, this._focusedNode)) {
+        this._recomputeLayout();
+        this._requestRender();
+        return;
+      }
       if (node._source === 'api' && !hasRealChildren) {
         await this._loadChildren(node, true);
         if (node.children.length > 0) {
@@ -414,11 +451,11 @@ export class TreeRenderer {
  
     node.loading = false;
     node.loaded  = true;
- 
+  
     if (!raw || raw.length === 0) return;
- 
+  
     const isBio = (typeof window.isBiologicalName === 'function') ? window.isBiologicalName : null;
-    node.children = raw
+    const incoming = raw
       .filter(c => !isBio || isBio(c.name || ''))
       .map(c => {
       const child = new TreeNode(
@@ -429,6 +466,7 @@ export class TreeRenderer {
       child.y = node.y;
       return child;
     });
+    _mergeChildren(node, incoming);
   }
  
   _loop() {

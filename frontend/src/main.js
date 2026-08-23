@@ -1867,20 +1867,34 @@ export async function executeSearch(queryText) {
   }
  
   if (foundNode) {
-    // CORREÇÃO: Abre todas as "pastas" do ancestral até o nó pesquisado para permitir o foco visual
+    // Abre todas as "pastas" do ancestral até o nó pesquisado para permitir o foco visual
     let p = foundNode.parent;
     while (p) {
       p.expanded = true;
       p = p.parent;
     }
 
+    // Expande a LARGURA: carrega os filhos (irmãos) de cada ancestral, para que
+    // a árvore mostre "animalia → [todos os filhos] → chordata → [todos os filhos] ...".
+    // O merge em TreeRenderer preserva a cadeia até a espécie; a câmera foca na espécie.
+    let anc = foundNode.parent;
+    while (anc) {
+      if (rendererInstance && typeof rendererInstance._loadChildren === 'function') {
+        try {
+          await rendererInstance._loadChildren(anc, anc._source === 'api');
+        } catch (e) { /* ignora falha de uma fonte e segue */ }
+        anc.expanded = true;
+      }
+      anc = anc.parent;
+    }
+
     sounds.playSFX('success');
- 
+  
     if (rendererInstance && typeof rendererInstance.focusOnNode === 'function') {
       if (typeof rendererInstance._recomputeLayout === 'function') rendererInstance._recomputeLayout();
       rendererInstance.focusOnNode(foundNode, 1.4);
     }
- 
+  
     if (typeof showTaxonInfo === 'function') {
       showTaxonInfo(foundNode);
     }
