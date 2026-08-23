@@ -1862,7 +1862,12 @@ export async function executeSearch(queryText) {
       statsLoading.textContent = 'Buscando na Catalogue of Life…';
       statsLoading.style.display = 'block';
     }
-    foundNode = await fetchAndInsertExternalTaxon(targetQuery);
+    // Retry: a API de catálogo às vezes falha na primeira chamada (reqüesnta
+    // fria / instabilidade), mas funciona na tentativa seguinte.
+    for (let attempt = 0; attempt < 3 && !foundNode; attempt++) {
+      if (attempt > 0) await new Promise(r => setTimeout(r, 700));
+      foundNode = await fetchAndInsertExternalTaxon(targetQuery);
+    }
     if (statsLoading) statsLoading.style.display = 'none';
   }
  
