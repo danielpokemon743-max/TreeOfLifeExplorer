@@ -194,9 +194,9 @@ export class TreeRenderer {
     this.app.stage.addChildAt(this._bgContainer, 0);
     this._bgLayers = [];
     const bgConfigs = [
-      { count: 90,  size: 0.9, alpha: 0.35, factor: 0.12 },
-      { count: 55,  size: 1.4, alpha: 0.55, factor: 0.28 },
-      { count: 30,  size: 1.9, alpha: 0.8,  factor: 0.5  },
+      { count: 110, size: 1.25, alpha: 0.5,  factor: 0.12 },
+      { count: 65,  size: 1.7,  alpha: 0.68, factor: 0.28 },
+      { count: 38,  size: 2.3,  alpha: 0.88, factor: 0.5  },
     ];
     for (let li = 0; li < bgConfigs.length; li++) {
       const cfg = bgConfigs[li];
@@ -384,9 +384,9 @@ export class TreeRenderer {
       }
     }
 
-    // 🔵 PARTÍCULAS otimizadas: max 28, spawn raro, sem filter() por frame
+    // 🔵 PARTÍCULAS: visíveis mas com cap (equilíbrio perf/efeito)
     if (this.allNodes.length > 0) {
-      if (this._particles.length < 28 && Math.random() < 0.04) {
+      if (this._particles.length < 42 && Math.random() < 0.07) {
         // amostragem sem alocar array: tenta achar um parent expandido aleatório
         let p = null, tries = 0;
         while (!p && tries < 6) {
@@ -642,7 +642,7 @@ export class TreeRenderer {
       }
     }
 
-    // 🔵 PARTÍCULAS otimizadas: raio único, poucas simultâneas
+    // 🔵 PARTÍCULAS: bolinha + brilho leve
     if (this._particles && this._particles.length && this.gfxParticles) {
       for (const pt of this._particles) {
         const p = pt.parent, c = pt.child;
@@ -659,9 +659,12 @@ export class TreeRenderer {
           y = c.y;
         }
         const col = parseColorHex(c.color);
-        const pr = 1.6 / Math.max(0.6, scale);
-        this.gfxParticles.beginFill(col, 0.85);
+        const pr = 2.1 / Math.max(0.6, scale);
+        this.gfxParticles.beginFill(col, 0.92);
         this.gfxParticles.drawCircle(x, y, pr);
+        this.gfxParticles.endFill();
+        this.gfxParticles.beginFill(col, 0.24);
+        this.gfxParticles.drawCircle(x, y, pr * 2.0);
         this.gfxParticles.endFill();
       }
     }
@@ -674,11 +677,11 @@ export class TreeRenderer {
       const r = n.nodeR || 3;
       const a = n._alpha || 1;
 
-      // 🌟 BLOOM otimizado: só para reinos/domínios e nó selecionado
-      const wantBloom = n.selected || n.rank === 'kingdom' || n.rank === 'domain' || n.rank === 'life';
+      // 🌟 BLOOM visível mas leve: selecionado + reinos + ranks maiores
+      const wantBloom = n.selected || ['life','domain','kingdom','phylum','class','order','family'].includes(n.rank);
       if (wantBloom) {
-        const bloomR = r * 2.4;
-        const bloomA = 0.18 * a;
+        const bloomR = r * 2.8;
+        const bloomA = (n.selected ? 0.22 : 0.14) * a;
         this.gfxNodes.beginFill(colorHex, bloomA);
         this.gfxNodes.drawCircle(n.x, n.y, bloomR);
         this.gfxNodes.endFill();
