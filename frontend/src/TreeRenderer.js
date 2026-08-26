@@ -365,41 +365,45 @@ export class TreeRenderer {
       }
     }
 
-    // ✨ PULSE do nó selecionado
-    if (this._focusedNode || this._particles.length > 0) {
-      this._pulseTime = (this._pulseTime || 0) + 0.14;
+    // ✨ PULSE só quando há nó focado (evita loop infinito quando ocioso)
+    if (this._focusedNode) {
+      this._pulseTime = (this._pulseTime || 0) + 0.12;
       activeAnimation = true;
     }
 
-    // 🌌 PARALLAX de fundo (estrelas se movem mais devagar que a câmera)
+    // 🌌 PARALLAX — só atualiza se a câmera realmente se moveu
     if (this._bgLayers && this._bgLayers.length) {
-      for (const g of this._bgLayers) {
-        const f = g._parallaxFactor || 0.2;
-        // desloca o layer proporcionalmente ao movimento do mundo
-        g.x = this.world.x * f * 0.35;
-        g.y = this.world.y * f * 0.35;
+      const wx = this.world.x, wy = this.world.y;
+      if (wx !== this._lastBgX || wy !== this._lastBgY) {
+        for (const g of this._bgLayers) {
+          const f = g._parallaxFactor || 0.2;
+          g.x = wx * f * 0.35;
+          g.y = wy * f * 0.35;
+        }
+        this._lastBgX = wx; this._lastBgY = wy;
       }
-      // precisa redesenhar quando a câmera se move
-      if (Math.abs(this.world.x) > 0.5 || Math.abs(this.world.y) > 0.5) activeAnimation = true;
     }
 
-    // 🔵 PARTÍCULAS fluindo nas arestas
+    // 🔵 PARTÍCULAS otimizadas: max 28, spawn raro, sem filter() por frame
     if (this.allNodes.length > 0) {
-      // spawn ocasional
-      if (this._particles.length < 70 && Math.random() < 0.09) {
-        const parents = this.allNodes.filter(n => n.expanded && n.children && n.children.length > 0);
-        if (parents.length) {
-          const p = parents[Math.floor(Math.random() * parents.length)];
+      if (this._particles.length < 28 && Math.random() < 0.04) {
+        // amostragem sem alocar array: tenta achar um parent expandido aleatório
+        let p = null, tries = 0;
+        while (!p && tries < 6) {
+          const cand = this.allNodes[Math.floor(Math.random() * this.allNodes.length)];
+          if (cand.expanded && cand.children && cand.children.length) p = cand;
+          tries++;
+        }
+        if (p) {
           const c = p.children[Math.floor(Math.random() * p.children.length)];
           if (c && (this._inViewport(p) || this._inViewport(c))) {
-            this._particles.push({ parent: p, child: c, t: 0, speed: 0.014 + Math.random() * 0.018 });
+            this._particles.push({ parent: p, child: c, t: 0, speed: 0.018 + Math.random() * 0.02 });
             activeAnimation = true;
           }
         }
       }
       for (let i = this._particles.length - 1; i >= 0; i--) {
         const pt = this._particles[i];
-        // remove se o ramo colapsou
         if (!pt.parent.expanded || !pt.parent.children.includes(pt.child)) {
           this._particles.splice(i, 1); continue;
         }
@@ -638,14 +642,13 @@ export class TreeRenderer {
       }
     }
 
-    // 🔵 PARTÍCULAS fluindo nas arestas (desenhadas por cima das linhas)
+    // 🔵 PARTÍCULAS otimizadas: raio único, poucas simultâneas
     if (this._particles && this._particles.length && this.gfxParticles) {
       for (const pt of this._particles) {
         const p = pt.parent, c = pt.child;
         if (!p || !c) continue;
         const t = pt.t;
         let x, y;
-        // aresta em L: vertical até y do filho, depois horizontal
         if (t < 0.5) {
           const tt = t * 2;
           x = p.x;
@@ -656,13 +659,9 @@ export class TreeRenderer {
           y = c.y;
         }
         const col = parseColorHex(c.color);
-        const pr = 1.8 / Math.max(0.6, scale);
-        this.gfxParticles.beginFill(col, 0.9);
+        const pr = 1.6 / Math.max(0.6, scale);
+        this.gfxParticles.beginFill(col, 0.85);
         this.gfxParticles.drawCircle(x, y, pr);
-        this.gfxParticles.endFill();
-        // rastro sutil
-        this.gfxParticles.beginFill(col, 0.22);
-        this.gfxParticles.drawCircle(x, y, pr * 2.2);
         this.gfxParticles.endFill();
       }
     }
@@ -675,28 +674,27 @@ export class TreeRenderer {
       const r = n.nodeR || 3;
       const a = n._alpha || 1;
 
-      // 🌟 BLOOM sutil por reino (brilho externo)
-      const bloomR = r * 2.6;
-      const bloomA = 0.16 * a * (n.rank === 'kingdom' || n.rank === 'domain' ? 1.35 : 1);
-      this.gfxNodes.beginFill(colorHex, bloomA);
-      this.gfxNodes.drawCircle(n.x, n.y, bloomR);
-      this.gfxNodes.endFill();
+      // 🌟 BLOOM otimizado: só para reinos/domínios e nó selecionado
+      const wantBloom = n.selected || n.rank === 'kingdom' || n.rank === 'domain' || n.rank === 'life';
+      if (wantBloom) {
+        const bloomR = r * 2.4;
+        const bloomA = 0.18 * a;
+        this.gfxNodes.beginFill(colorHex, bloomA);
+        this.gfxNodes.drawCircle(n.x, n.y, bloomR);
+        this.gfxNodes.endFill();
+      }
  
       this.gfxNodes.beginFill(colorHex, a);
       this.gfxNodes.drawCircle(n.x, n.y, r);
       this.gfxNodes.endFill();
  
       if (n.selected) {
-        // 💓 PULSE: halo que respira
-        const pulse = Math.sin(this._pulseTime || 0) * 1.8;
-        const pulseA = 0.55 + Math.sin(this._pulseTime || 0) * 0.2;
-        this.gfxNodes.lineStyle(2.5 / scale, 0x00FFCC, Math.max(0, pulseA));
+        // 💓 PULSE: halo que respira (só no selecionado)
+        const pulse = Math.sin(this._pulseTime || 0) * 1.6;
+        const pulseA = 0.5 + Math.sin(this._pulseTime || 0) * 0.18;
+        this.gfxNodes.lineStyle(2.2 / scale, 0x00FFCC, Math.max(0, pulseA));
         this.gfxNodes.drawCircle(n.x, n.y, r + 6 + pulse);
         this.gfxNodes.lineStyle(0);
-        // segundo halo mais externo e difuso
-        this.gfxNodes.beginFill(0x00FFCC, 0.09 * a);
-        this.gfxNodes.drawCircle(n.x, n.y, r + 11 + pulse * 0.6);
-        this.gfxNodes.endFill();
       }
  
       const isKingdomOrDomain = ['life', 'domain', 'kingdom'].includes(n.rank);
