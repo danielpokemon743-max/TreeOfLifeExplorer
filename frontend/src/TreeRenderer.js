@@ -182,6 +182,45 @@ export class TreeRenderer {
     this.world.addChild(this.gfxEdges);
     this.world.addChild(this.gfxNodes);
     this.world.addChild(this.gfxLabels);
+
+    // Partículas fluindo nas arestas
+    this.gfxParticles = new PIXI.Graphics();
+    this.world.addChild(this.gfxParticles);
+    this._particles = [];
+    this._pulseTime = 0;
+
+    // Parallax de fundo (3 camadas de estrelas)
+    this._bgContainer = new PIXI.Container();
+    this.app.stage.addChildAt(this._bgContainer, 0);
+    this._bgLayers = [];
+    const bgConfigs = [
+      { count: 90,  size: 0.9, alpha: 0.35, factor: 0.12 },
+      { count: 55,  size: 1.4, alpha: 0.55, factor: 0.28 },
+      { count: 30,  size: 1.9, alpha: 0.8,  factor: 0.5  },
+    ];
+    for (let li = 0; li < bgConfigs.length; li++) {
+      const cfg = bgConfigs[li];
+      const g = new PIXI.Graphics();
+      g._parallaxFactor = cfg.factor;
+      // estrelas espalhadas numa área grande para cobrir pan
+      const spreadW = 6000, spreadH = 4000;
+      for (let s = 0; s < cfg.count; s++) {
+        const x = (Math.random() - 0.5) * spreadW;
+        const y = (Math.random() - 0.5) * spreadH;
+        const a = cfg.alpha * (0.6 + Math.random() * 0.4);
+        g.beginFill(0xffffff, a);
+        g.drawCircle(x, y, cfg.size * (0.7 + Math.random() * 0.6));
+        g.endFill();
+        // brilho sutil ao redor de algumas estrelas da camada mais próxima
+        if (li === 2 && Math.random() < 0.35) {
+          g.beginFill(0xaaccff, a * 0.18);
+          g.drawCircle(x, y, cfg.size * 3.2);
+          g.endFill();
+        }
+      }
+      this._bgContainer.addChild(g);
+      this._bgLayers.push(g);
+    }
  
     this.scale   = 1.0;
     this.root     = null;
@@ -322,6 +361,50 @@ export class TreeRenderer {
  
       if (n._alpha < 1) {
         n._alpha = Math.min(1, n._alpha + FADE_SPD);
+        activeAnimation = true;
+      }
+    }
+
+    // ✨ PULSE do nó selecionado
+    if (this._focusedNode || this._particles.length > 0) {
+      this._pulseTime = (this._pulseTime || 0) + 0.14;
+      activeAnimation = true;
+    }
+
+    // 🌌 PARALLAX de fundo (estrelas se movem mais devagar que a câmera)
+    if (this._bgLayers && this._bgLayers.length) {
+      for (const g of this._bgLayers) {
+        const f = g._parallaxFactor || 0.2;
+        // desloca o layer proporcionalmente ao movimento do mundo
+        g.x = this.world.x * f * 0.35;
+        g.y = this.world.y * f * 0.35;
+      }
+      // precisa redesenhar quando a câmera se move
+      if (Math.abs(this.world.x) > 0.5 || Math.abs(this.world.y) > 0.5) activeAnimation = true;
+    }
+
+    // 🔵 PARTÍCULAS fluindo nas arestas
+    if (this.allNodes.length > 0) {
+      // spawn ocasional
+      if (this._particles.length < 70 && Math.random() < 0.09) {
+        const parents = this.allNodes.filter(n => n.expanded && n.children && n.children.length > 0);
+        if (parents.length) {
+          const p = parents[Math.floor(Math.random() * parents.length)];
+          const c = p.children[Math.floor(Math.random() * p.children.length)];
+          if (c && (this._inViewport(p) || this._inViewport(c))) {
+            this._particles.push({ parent: p, child: c, t: 0, speed: 0.014 + Math.random() * 0.018 });
+            activeAnimation = true;
+          }
+        }
+      }
+      for (let i = this._particles.length - 1; i >= 0; i--) {
+        const pt = this._particles[i];
+        // remove se o ramo colapsou
+        if (!pt.parent.expanded || !pt.parent.children.includes(pt.child)) {
+          this._particles.splice(i, 1); continue;
+        }
+        pt.t += pt.speed;
+        if (pt.t >= 1) { this._particles.splice(i, 1); continue; }
         activeAnimation = true;
       }
     }
@@ -524,6 +607,7 @@ export class TreeRenderer {
     if (!this.gfxEdges || !this.gfxNodes || !this.gfxLabels) return;
     this.gfxEdges.clear();
     this.gfxNodes.clear();
+    if (this.gfxParticles) this.gfxParticles.clear();
     this.gfxLabels.removeChildren();
  
     if (!this.root || !this.allNodes || this.allNodes.length === 0) return;
@@ -553,22 +637,66 @@ export class TreeRenderer {
         }
       }
     }
- 
+
+    // 🔵 PARTÍCULAS fluindo nas arestas (desenhadas por cima das linhas)
+    if (this._particles && this._particles.length && this.gfxParticles) {
+      for (const pt of this._particles) {
+        const p = pt.parent, c = pt.child;
+        if (!p || !c) continue;
+        const t = pt.t;
+        let x, y;
+        // aresta em L: vertical até y do filho, depois horizontal
+        if (t < 0.5) {
+          const tt = t * 2;
+          x = p.x;
+          y = p.y + (c.y - p.y) * tt;
+        } else {
+          const tt = (t - 0.5) * 2;
+          x = p.x + (c.x - p.x) * tt;
+          y = c.y;
+        }
+        const col = parseColorHex(c.color);
+        const pr = 1.8 / Math.max(0.6, scale);
+        this.gfxParticles.beginFill(col, 0.9);
+        this.gfxParticles.drawCircle(x, y, pr);
+        this.gfxParticles.endFill();
+        // rastro sutil
+        this.gfxParticles.beginFill(col, 0.22);
+        this.gfxParticles.drawCircle(x, y, pr * 2.2);
+        this.gfxParticles.endFill();
+      }
+    }
+
     for (let i = 0; i < len; i++) {
       const n = this.allNodes[i];
       if (!this._inViewport(n)) continue;
  
       const colorHex = parseColorHex(n.color);
       const r = n.nodeR || 3;
+      const a = n._alpha || 1;
+
+      // 🌟 BLOOM sutil por reino (brilho externo)
+      const bloomR = r * 2.6;
+      const bloomA = 0.16 * a * (n.rank === 'kingdom' || n.rank === 'domain' ? 1.35 : 1);
+      this.gfxNodes.beginFill(colorHex, bloomA);
+      this.gfxNodes.drawCircle(n.x, n.y, bloomR);
+      this.gfxNodes.endFill();
  
-      this.gfxNodes.beginFill(colorHex, n._alpha || 1);
+      this.gfxNodes.beginFill(colorHex, a);
       this.gfxNodes.drawCircle(n.x, n.y, r);
       this.gfxNodes.endFill();
  
       if (n.selected) {
-        this.gfxNodes.lineStyle(2.5 / scale, 0x00FFCC, 1);
-        this.gfxNodes.drawCircle(n.x, n.y, r + 6);
+        // 💓 PULSE: halo que respira
+        const pulse = Math.sin(this._pulseTime || 0) * 1.8;
+        const pulseA = 0.55 + Math.sin(this._pulseTime || 0) * 0.2;
+        this.gfxNodes.lineStyle(2.5 / scale, 0x00FFCC, Math.max(0, pulseA));
+        this.gfxNodes.drawCircle(n.x, n.y, r + 6 + pulse);
         this.gfxNodes.lineStyle(0);
+        // segundo halo mais externo e difuso
+        this.gfxNodes.beginFill(0x00FFCC, 0.09 * a);
+        this.gfxNodes.drawCircle(n.x, n.y, r + 11 + pulse * 0.6);
+        this.gfxNodes.endFill();
       }
  
       const isKingdomOrDomain = ['life', 'domain', 'kingdom'].includes(n.rank);
