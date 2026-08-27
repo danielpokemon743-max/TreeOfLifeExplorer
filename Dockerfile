@@ -28,4 +28,4 @@ ENV FRONTEND_DIST=/app/frontend/dist
 
 EXPOSE 8000
 WORKDIR /app/backend
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "1"]
+CMD ["sh", "-c", "alembic upgrade head 2>&1 | head -n 50; echo \"[alembic] done\"; uvicorn app.main:app --host 0.0.0.0 --port 8000 --workers 1"]

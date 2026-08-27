@@ -13,28 +13,31 @@ config = context.config
 
 import os
 import sys
+from urllib.parse import urlparse
 
+# Usa a Base real do app (app.models) e a DATABASE_URL do settings
 sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
-from infrastructure.database import DATABASE_URL
+from app.config import settings as _settings
+from app.models import Base as _AppBase
 
-config.set_main_option("sqlalchemy.url", DATABASE_URL)
+# Converte DATABASE_URL async para sync se necessário (alembic usa sync)
+def _alembic_sync_url(url: str) -> str:
+    if url.startswith("postgresql+asyncpg://"):
+        return url.replace("postgresql+asyncpg://", "postgresql://", 1)
+    if url.startswith("sqlite+aiosqlite://"):
+        return url.replace("sqlite+aiosqlite://", "sqlite://", 1)
+    return url
+
+config.set_main_option("sqlalchemy.url", _alembic_sync_url(_settings.DATABASE_URL))
 
 # Interpret the config file for Python logging.
 # This line sets up loggers basically.
 if config.config_file_name is not None:
     fileConfig(config.config_file_name)
 
-import os
-import sys
-
-sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
-
-import domain.models  # noqa
-from infrastructure.database import DATABASE_URL, Base
-
 # add your model's MetaData object here
 # for 'autogenerate' support
-target_metadata = Base.metadata
+target_metadata = _AppBase.metadata
 
 # other values from the config, defined by the needs of env.py,
 # can be acquired:

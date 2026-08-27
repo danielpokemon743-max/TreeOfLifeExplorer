@@ -79,6 +79,11 @@ if settings.PRODUCTION and not _jwt_secret_is_safe():
         "PRODUCTION=True exige um JWT_SECRET seguro. Defina a variável de ambiente "
         "JWT_SECRET (ex.: `openssl rand -hex 32`) antes de subir em produção."
     )
+if settings.PRODUCTION and not settings.PUBLIC_URL.startswith("https://"):
+    raise RuntimeError(
+        "PRODUCTION=True exige PUBLIC_URL com https:// (ex.: https://seu-app.onrender.com). "
+        f"Atual: {settings.PUBLIC_URL}"
+    )
 if not _jwt_secret_is_safe():
     warnings.warn(
         "AVISO: usando o JWT_SECRET padrão (inseguro). Defina a variável de ambiente "
