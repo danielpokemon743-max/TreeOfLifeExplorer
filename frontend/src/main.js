@@ -3340,6 +3340,13 @@ async function initTurnstile() {
           }
         };
         tryRender();
+        // fallback: se após 3s o iframe não apareceu (domínio não autorizado, adblock), volta ao captcha matemático
+        setTimeout(() => {
+          if (cf && !cf.querySelector('iframe')) {
+            if (widget) widget.style.display = 'none';
+            if (box) { box.style.display = 'block'; refreshCaptcha(); }
+          }
+        }, 3000);
       }
     } else {
       if (widget) widget.style.display = 'none';

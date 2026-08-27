@@ -466,10 +466,20 @@ async def login_start(request: Request, body: LoginStartRequest, db: AsyncSessio
             detail=f"Muitas tentativas de login. Tente novamente em {remaining} segundos.",
         )
 
-    # Anti-bot: Turnstile se configurado, senão captcha matemático
+    # Anti-bot: tenta Turnstile se configurado, com fallback para captcha matemático
     if settings.TURNSTILE_SECRET:
-        if not body.turnstile_token or not await _verify_turnstile(body.turnstile_token, ip):
-            raise HTTPException(status_code=400, detail="Verificação Turnstile falhou. Tente novamente.")
+        turnstile_ok = False
+        if body.turnstile_token:
+            turnstile_ok = await _verify_turnstile(body.turnstile_token, ip)
+        if turnstile_ok:
+            pass
+        else:
+            # fallback: tenta captcha matemático se Turnstile não foi resolvido (widget não carregou, localhost, etc.)
+            if body.captcha_id and body.captcha_answer is not None:
+                if not _consume_captcha(body.captcha_id, body.captcha_answer):
+                    raise HTTPException(status_code=400, detail="Captcha inválido e Turnstile não resolvido. Tente novamente.")
+            else:
+                raise HTTPException(status_code=400, detail="Resolva o Turnstile antes de entrar. Se o widget não apareceu, adicione localhost ao domínio no Cloudflare Dashboard → Turnstile → seu site → Domains, ou aguarde 2s e tente novamente.")
     else:
         if not _consume_captcha(body.captcha_id, body.captcha_answer):
             raise HTTPException(status_code=400, detail="Captcha inválido ou resposta incorreta. Tente novamente.")
