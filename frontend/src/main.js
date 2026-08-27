@@ -3340,13 +3340,15 @@ async function initTurnstile() {
           }
         };
         tryRender();
-        // fallback: se após 3s o iframe não apareceu (domínio não autorizado, adblock), volta ao captcha matemático
+        // fallback: só volta ao captcha matemático se o Turnstile realmente não renderizou
         setTimeout(() => {
-          if (cf && !cf.querySelector('iframe')) {
+          const hasContent = cf && (cf.children.length > 0 || cf.querySelector('iframe'));
+          const wasRendered = cf && cf.dataset.rendered === '1';
+          if (!hasContent && !wasRendered) {
             if (widget) widget.style.display = 'none';
             if (box) { box.style.display = 'block'; refreshCaptcha(); }
           }
-        }, 3000);
+        }, 6000);
       }
     } else {
       if (widget) widget.style.display = 'none';
