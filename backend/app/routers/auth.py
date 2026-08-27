@@ -139,7 +139,10 @@ try:
     from app.redis import redis_client, incr_with_ttl, get_ttl
 except Exception:
     redis_client = None
-    incr_with_ttl = get_ttl = None
+    async def incr_with_ttl(*_a, **_k):  # type: ignore
+        return None
+    async def get_ttl(*_a, **_k):  # type: ignore
+        return 0
 
 async def _check_login_allowed_redis(ip: str) -> int:
     if redis_client is not None:
@@ -301,7 +304,9 @@ async def register_start(body: RegisterStartRequest, request: Request, db: Async
                 "displayName": nick or "Explorador"
             },
             "challenge": challenge,
-            "pubKeyCredParams": [{"type": "public-key", "alg": -7}],
+            "pubKeyCredParams": [{"type": "public-key", "alg": -7}, {"type": "public-key", "alg": -257}],
+            "authenticatorSelection": {"residentKey": "preferred", "requireResidentKey": False, "userVerification": "preferred"},
+            "extensions": {"credProps": True},
             "timeout": 60000,
             "attestation": "none"
         }
@@ -330,12 +335,35 @@ async def register_finish(body: RegisterFinishRequest, db: AsyncSession = Depend
     db.add(user)
     await db.flush()
 
+    # Tenta salvar a credencial real vinda do navegador; fallback para mock
+    resp = body.webauthn_response or {}
+    cred_id = resp.get("id") or resp.get("rawId") or f"cred_{uuid.uuid4().hex}"
+    # normaliza para string
+    if not isinstance(cred_id, str):
+        cred_id = str(cred_id)
+    pub_key = b"mock_public_key"
+    transports = []
+    try:
+        r = resp.get("response") or {}
+        att = r.get("attestationObject")
+        if att and isinstance(att, str):
+            import base64
+            b64 = att + "=" * (-len(att) % 4)
+            pub_key = base64.urlsafe_b64decode(b64.encode())
+        elif resp.get("rawId"):
+            pub_key = str(resp.get("rawId")).encode()[:512]
+        transports = r.get("transports") or resp.get("transports") or []
+        if not isinstance(transports, list):
+            transports = []
+    except Exception:
+        pub_key = b"mock_public_key"
+
     passkey = Passkey(
         user_id=user.id,
-        credential_id=f"cred_{uuid.uuid4().hex}",
-        public_key=b"mock_public_key",
+        credential_id=cred_id[:512],
+        public_key=pub_key[:2048] if isinstance(pub_key, (bytes, bytearray)) else b"mock_public_key",
         sign_count=0,
-        transports=[],
+        transports=transports[:10],
         device_name=pending["device_name"] or "Navegador Web"
     )
     db.add(passkey)
@@ -382,12 +410,18 @@ async def login_start(body: LoginStartRequest, request: Request, db: AsyncSessio
     _pending_login[session_id] = {"user_id": user.id, "challenge": challenge}
     await _store_webauthn_challenge(session_id, challenge)
 
+    # allowCredentials: informa ao navegador quais chaves oferecer (evita "nenhuma chave disponível" genérico)
+    passkeys = (await db.execute(select(Passkey).where(Passkey.user_id == user.id))).scalars().all()
+    allow_creds = [{"id": p.credential_id, "type": "public-key", "transports": p.transports or ["internal", "hybrid"]} for p in passkeys]
+
     return {
         "session_id": session_id,
         "options": {
             "challenge": challenge,
             "timeout": 60000,
-            "rpId": _rp_id(request)
+            "rpId": _rp_id(request),
+            "allowCredentials": allow_creds,
+            "userVerification": "preferred"
         }
     }
 
@@ -424,19 +458,42 @@ async def add_passkey_start(body: PasskeyAddStartRequest, request: Request, curr
             "challenge": challenge,
             "rp": {"name": settings.RP_NAME, "id": _rp_id(request)},
             "user": {"id": "dXNlcl8xMjM", "name": "usuario", "displayName": "Explorador"},
-            "pubKeyCredParams": [{"type": "public-key", "alg": -7}],
-            "timeout": 60000
+            "pubKeyCredParams": [{"type": "public-key", "alg": -7}, {"type": "public-key", "alg": -257}],
+            "authenticatorSelection": {"residentKey": "preferred", "requireResidentKey": False, "userVerification": "preferred"},
+            "extensions": {"credProps": True},
+            "timeout": 60000,
+            "attestation": "none"
         }
     }
 
 @router.post("/passkeys/add/finish")
 async def add_passkey_finish(body: PasskeyAddFinishRequest, db: AsyncSession = Depends(get_db), current_user_id: uuid.UUID = Depends(get_current_user_id)):
+    resp = body.webauthn_response or {}
+    cred_id = resp.get("id") or resp.get("rawId") or f"cred_{uuid.uuid4().hex}"
+    if not isinstance(cred_id, str):
+        cred_id = str(cred_id)
+    pub_key = b"mock_public_key"
+    transports = []
+    try:
+        r = resp.get("response") or {}
+        att = r.get("attestationObject")
+        if att and isinstance(att, str):
+            import base64
+            b64 = att + "=" * (-len(att) % 4)
+            pub_key = base64.urlsafe_b64decode(b64.encode())
+        elif resp.get("rawId"):
+            pub_key = str(resp.get("rawId")).encode()[:512]
+        transports = r.get("transports") or resp.get("transports") or []
+        if not isinstance(transports, list):
+            transports = []
+    except Exception:
+        pub_key = b"mock_public_key"
     passkey_obj = Passkey(
         user_id=current_user_id,
-        credential_id=f"cred_{uuid.uuid4().hex}",
-        public_key=b"mock_public_key",
+        credential_id=cred_id[:512],
+        public_key=pub_key[:2048] if isinstance(pub_key, (bytes, bytearray)) else b"mock_public_key",
         sign_count=0,
-        transports=[],
+        transports=transports[:10],
         device_name=body.device_name or "Novo Dispositivo"
     )
     db.add(passkey_obj)
