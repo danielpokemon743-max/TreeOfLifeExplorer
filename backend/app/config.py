@@ -32,10 +32,10 @@ class Settings(BaseSettings):
     # URI para relatórios CSP (Report-Only). Se vazio, não envia report-uri
     CSP_REPORT_URI: str = ""
 
-    # Cloudflare Turnstile (bot protection) — se TURNSTILE_SECRET estiver setado,
-    # o login passa a exigir o token do widget; senão cai no captcha matemático
-    TURNSTILE_SECRET: str = ""
-    TURNSTILE_SITEKEY: str = ""
+    # Cloudflare Turnstile (bot protection) — demo keys sempre passam, troque em produção
+    # Demo sitekey/secret da Cloudflare (sempre validam). Defina suas chaves reais no Render.
+    TURNSTILE_SECRET: str = "1x0000000000000000000000000000000AA"
+    TURNSTILE_SITEKEY: str = "1x00000000000000000000AA"
 
     # Nicks (separados por vírgula) que têm acesso ao painel de administração
     # (banir contas/IPs e ver o ranking). Ex: "Nutelloso" ou "Nutelloso,Admin"
