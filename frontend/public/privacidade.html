@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Privacidade e LGPD — Tree of Life Explorer</title>
+<style>
+body{font-family:Inter, sans-serif; background:#07070f; color:#e2e8f0; max-width:800px; margin:40px auto; padding:0 20px; line-height:1.7}
+h1{color:#2ecc71} h2{color:#f1c40f; margin-top:32px} a{color:#3498db}
+.card{background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.1); border-radius:10px; padding:16px; margin:16px 0}
+small{color:#94a3b8}
+</style>
+</head>
+<body>
+<h1>🔒 Privacidade e Proteção de Dados (LGPD)</h1>
+<p><small>Última atualização: 27/08/2026 — Tree of Life Explorer</small></p>
+
+<h2>1. Quem somos</h2>
+<p>Tree of Life Explorer — projeto educativo para explorar a biodiversidade. Contato DPO: <a href="mailto:privacidade@treeoflifeexplorer.local">privacidade@treeoflifeexplorer.local</a>.</p>
+
+<h2>2. Dados que coletamos</h2>
+<ul>
+<li><b>Cadastro:</b> nick (display_name), senha (hash bcrypt), país, nome do dispositivo, IP no momento do cadastro/login (campo <code>last_ip</code>), data de criação/último login.</li>
+<li><b>Uso do chat:</b> conteúdo da mensagem, canal (global/local), IP + geolocalização aproximada (país/região, lat/lon) derivada do IP via <code>https://ip-api.com</code> (cache 24h) para chat local (≤200km + país/região).</li>
+<li><b>Progresso:</b> descobertas, favoritos, conquistas, tempo ativo, XP/nível.</li>
+<li><b>Visualizações:</b> <code>device_id</code> aleatório por navegador + <code>first_ip</code> informativo (deduplicado por dispositivo).</li>
+<li><b>IP ban:</b> lista de IPs banidos por administração.</li>
+</ul>
+
+<h2>3. Finalidade e base legal</h2>
+<p>Legítimo interesse (segurança da comunidade, evitar contas duplicadas, moderar chat, banir abusivos) e execução de contrato (funcionalidades logadas). O IP só é armazenado no cadastro se você marcar <b>"Permito registrar meu IP"</b> — sem isso, use como visitante.</p>
+
+<h2>4. Compartilhamento</h2>
+<p>Geolocalização usa <code>https://ip-api.com</code> (terceiro, EUA) apenas com o IP, sem outros dados pessoais. Não vendemos dados.</p>
+
+<h2>5. Retenção e anonimização</h2>
+<p>Dados de conta mantidos enquanto a conta existir. Após exclusão (ver abaixo), apagamos nick, hash, país, IP, passkeys, descobertas, favoritos e mensagens do chat (via cascade). <code>SiteView</code> permanece apenas como contador anônimo por <code>device_id</code>. Previsão de anonimização automática de <code>last_ip</code> após 12 meses (roadmap).</p>
+
+<h2>6. Seus direitos (LGPD)</h2>
+<div class="card">
+<b>Acesse seus dados:</b> logado, faça <code>GET /api/auth/export</code> (ou botão "Exportar meus dados" no painel da conta) — retorna JSON com tudo.<br>
+<b>Apague sua conta:</b> logado, <code>DELETE /api/auth/me</code> (ou botão "Apagar minha conta" — irreversível). Revoga o token e apaga em cascata.<br>
+<b>Corrija:</b> país/nick não são editáveis hoje — apague e recrie se necessário (ou peça ao DPO).<br>
+<b>Revogue consentimento de IP:</b> apagar a conta remove o IP.
+</div>
+
+<h2>7. Segurança</h2>
+<p>Senhas em bcrypt, JWT 7 dias com <code>jti</code> e revogação no logout, CSP estrita, HSTS em produção, rate-limit por IP (com Redis quando configurado), validação de entrada.</p>
+
+<h2>8. Cookies e armazenamento</h2>
+<p>Não usamos cookies de rastreamento. Usamos <code>localStorage</code> para o token (<code>passkey_auth_token</code>) e preferências locais. Ao sair, o token é revogado no servidor.</p>
+
+<p><a href="/">← Voltar ao site</a></p>
+</body>
+</html>

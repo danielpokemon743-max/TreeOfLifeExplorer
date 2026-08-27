@@ -720,6 +720,26 @@ export async function fetchUserChatHistory(userId) {
   }
 }
 
+export async function exportUserData() {
+  const token = getAuthToken();
+  if (!token) return { ok: false, detail: 'Não autenticado' };
+  try {
+    const res = await fetchWithTimeout(`${API_BASE}/export`, { headers: { 'Authorization': `Bearer ${token}` }, cache: 'no-store' });
+    const body = await res.json().catch(() => ({}));
+    return { ok: res.ok, status: res.status, detail: body.detail || '', ...body };
+  } catch { return { ok: false, detail: 'Erro de rede' }; }
+}
+
+export async function deleteUserAccount() {
+  const token = getAuthToken();
+  if (!token) return { ok: false, detail: 'Não autenticado' };
+  try {
+    const res = await fetchWithTimeout(`${API_BASE}/me`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` }, cache: 'no-store' });
+    const body = await res.json().catch(() => ({}));
+    return { ok: res.ok, status: res.status, detail: body.detail || '', ...body };
+  } catch { return { ok: false, detail: 'Erro de rede' }; }
+}
+
 export function fetchInbox() {
   return _mod(true, '/inbox');
 }

@@ -34,23 +34,24 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
         if settings.PRODUCTION:
             response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains; preload"
 
-        csp = (
-            "default-src 'self'; "
-            "script-src 'self' 'unsafe-eval'; "
-            "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; "
-            "font-src 'self' https://fonts.gstatic.com; "
-            "img-src 'self' data: blob: https:; "
-            "media-src 'self' data: blob: https:; "
-            "connect-src 'self' "
-            "https://api.opentreeoflife.org https://*.wikipedia.org "
-            "https://www.wikidata.org https://commons.wikimedia.org "
-            "https://api.gbif.org https://api.inaturalist.org https://www.inaturalist.org "
-            "https://api.checklistbank.org; "
-            "object-src 'none'; "
-            "base-uri 'self'; "
-            "form-action 'self'; "
-            "frame-ancestors 'none'"
-        )
+        csp_parts = [
+            "default-src 'self'",
+            "script-src 'self' 'unsafe-eval'",
+            "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+            "font-src 'self' https://fonts.gstatic.com",
+            "img-src 'self' data: blob: https:",
+            "media-src 'self' data: blob: https:",
+            "connect-src 'self' https://api.opentreeoflife.org https://*.wikipedia.org https://www.wikidata.org https://commons.wikimedia.org https://api.gbif.org https://api.inaturalist.org https://www.inaturalist.org https://api.checklistbank.org",
+            "object-src 'none'",
+            "base-uri 'self'",
+            "form-action 'self'",
+            "frame-ancestors 'none'",
+            "upgrade-insecure-requests",
+        ]
+        if settings.CSP_REPORT_URI:
+            csp_parts.append(f"report-uri {settings.CSP_REPORT_URI}")
+            csp_parts.append(f"report-to {settings.CSP_REPORT_URI}")
+        csp = "; ".join(csp_parts)
         response.headers["Content-Security-Policy"] = csp
         return response
 

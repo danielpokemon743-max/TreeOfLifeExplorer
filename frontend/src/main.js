@@ -35,6 +35,8 @@ import {
   fetchBanRequestsCount,
   detectMyIp,
   fetchCaptcha,
+  exportUserData,
+  deleteUserAccount,
   COUNTRIES,
   ACHIEVEMENT_NAMES,
   ACHIEVEMENT_DESCRIPTIONS
@@ -3417,7 +3419,32 @@ if (btnLogout) {
     alert('Sessão encerrada.');
   });
 }
- 
+
+const btnExport = document.getElementById('btn-export-data');
+if (btnExport) {
+  btnExport.addEventListener('click', async () => {
+    const res = await exportUserData();
+    if (!res.ok) return alert(res.detail || 'Falha ao exportar.');
+    const blob = new Blob([JSON.stringify(res, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a'); a.href = url; a.download = 'meus-dados-treeoflife.json'; a.click();
+    URL.revokeObjectURL(url);
+  });
+}
+const btnDelete = document.getElementById('btn-delete-account');
+if (btnDelete) {
+  btnDelete.addEventListener('click', async () => {
+    if (!confirm('Tem certeza que deseja APAGAR sua conta e todos os dados? Esta ação é irreversível.')) return;
+    if (!confirm('Confirme novamente: apagar conta, progresso, favoritos e mensagens?')) return;
+    const res = await deleteUserAccount();
+    if (!res.ok) return alert(res.detail || 'Falha ao apagar.');
+    await logoutUser();
+    await updateAuthUI();
+    alert('Conta apagada com sucesso.');
+    if (authModal) closeModal(authModal);
+  });
+}
+
 if (btnFavTaxon) {
   btnFavTaxon.addEventListener('click', async () => {
     if (!currentSelectedNode) return alert('Selecione um táxon primeiro.');

@@ -26,6 +26,12 @@ class Settings(BaseSettings):
     # Em produção (true), desliga comandos de desenvolvimento (ex.: /level-dev)
     PRODUCTION: bool = False
 
+    # Redis para rate-limit e challenges WebAuthn (opcional; fallback em memória se vazio)
+    REDIS_URL: str = ""
+
+    # URI para relatórios CSP (Report-Only). Se vazio, não envia report-uri
+    CSP_REPORT_URI: str = ""
+
     # Nicks (separados por vírgula) que têm acesso ao painel de administração
     # (banir contas/IPs e ver o ranking). Ex: "Nutelloso" ou "Nutelloso,Admin"
     ADMIN_NICKS: str = ""

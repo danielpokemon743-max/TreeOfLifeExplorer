@@ -1,3 +1,4 @@
+import secrets
 import uuid
 import random
 from datetime import datetime, timezone
@@ -7,7 +8,7 @@ from sqlalchemy import select, func as sa_func
 from pydantic import BaseModel
 
 from app.database import get_db
-from app.models import User, Passkey, Discovery, Favorite, Achievement, IpBan
+from app.models import User, Passkey, Discovery, Favorite, Achievement, IpBan, ChatMessage, BanRequest
 from app.config import settings
 from fastapi.security import HTTPAuthorizationCredentials
 
@@ -133,6 +134,58 @@ def _record_register_attempt(ip: str) -> bool:
     _prune_window(_register_counts[ip], _REGISTER_WINDOW_SECONDS)
     return len(_register_counts[ip]) <= _REGISTER_MAX_ATTEMPTS
 
+# ─── Rate-limit distribuído via Redis (P1) com fallback em memória ────────────
+try:
+    from app.redis import redis_client, incr_with_ttl, get_ttl
+except Exception:
+    redis_client = None
+    incr_with_ttl = get_ttl = None
+
+async def _check_login_allowed_redis(ip: str) -> int:
+    if redis_client is not None:
+        try:
+            ttl = await get_ttl(f"login:block:{ip}")
+            if ttl and ttl > 0:
+                return int(ttl)
+        except Exception:
+            pass
+    return _check_login_allowed(ip)
+
+async def _record_failed_login_redis(ip: str) -> None:
+    if redis_client is not None:
+        try:
+            cnt = await incr_with_ttl(f"login:fail:{ip}", _LOGIN_WINDOW_SECONDS)
+            if cnt is not None and cnt >= _LOGIN_MAX_ATTEMPTS:
+                await redis_client.setex(f"login:block:{ip}", _LOGIN_BLOCK_SECONDS, "1")
+                await redis_client.delete(f"login:fail:{ip}")
+                return
+            if cnt is not None:
+                return
+        except Exception:
+            pass
+    _record_failed_login(ip)
+
+async def _record_register_attempt_redis(ip: str) -> bool:
+    if redis_client is not None:
+        try:
+            cnt = await incr_with_ttl(f"register:cnt:{ip}", _REGISTER_WINDOW_SECONDS)
+            if cnt is not None:
+                return cnt <= _REGISTER_MAX_ATTEMPTS
+        except Exception:
+            pass
+    return _record_register_attempt(ip)
+
+async def _store_webauthn_challenge(session_id: str, challenge: str) -> None:
+    try:
+        from app.redis import store_challenge
+        await store_challenge(session_id, challenge, ttl=300)
+    except Exception:
+        pass
+
+def _gen_challenge() -> str:
+    # base64url sem padding, 32 bytes
+    return secrets.token_urlsafe(32)
+
 # ─── CAPTCHA MATEMÁTICO (anti-bot; em memória, 1 worker) ─────────────────────
 _captcha_tokens: dict[str, tuple[float, int]] = {}   # token -> (timestamp_criacao, resposta_certa)
 _CAPTCHA_TTL_SECONDS = 300                            # resposta válida por 5 minutos
@@ -198,8 +251,8 @@ async def register_start(body: RegisterStartRequest, request: Request, db: Async
     nick = body.display_name.strip()
     ip = client_ip(request)
 
-    # Anti spam: limites de tentativas por IP também no cadastro
-    if not _record_register_attempt(ip):
+    # Anti spam: limites de tentativas por IP também no cadastro (Redis com fallback)
+    if not await _record_register_attempt_redis(ip):
         raise HTTPException(status_code=429, detail="Muitas tentativas de cadastro. Aguarde alguns minutos.")
 
     # 1. Tamanho máximo do apelido
@@ -227,13 +280,16 @@ async def register_start(body: RegisterStartRequest, request: Request, db: Async
         raise HTTPException(status_code=403, detail="Este endereço IP está banido do cadastro e login.")
 
     session_id = f"sessao_{uuid.uuid4().hex[:12]}"
+    challenge = _gen_challenge()
     _pending_register[session_id] = {
         "display_name": nick,
         "password_hash": hash_password(body.password),
         "device_name": body.device_name or "Navegador Web",
         "country": (body.country or "").strip()[:100],
         "ip": ip,
+        "challenge": challenge,
     }
+    await _store_webauthn_challenge(session_id, challenge)
 
     return {
         "session_id": session_id,
@@ -244,7 +300,7 @@ async def register_start(body: RegisterStartRequest, request: Request, db: Async
                 "name": nick or "usuario",
                 "displayName": nick or "Explorador"
             },
-            "challenge": "dGVzdGVfY2hhbGxlbmdlXzEyMw",
+            "challenge": challenge,
             "pubKeyCredParams": [{"type": "public-key", "alg": -7}],
             "timeout": 60000,
             "attestation": "none"
@@ -296,8 +352,8 @@ async def login_start(body: LoginStartRequest, request: Request, db: AsyncSessio
 
     ip = client_ip(request)
 
-    # Anti brute force: IP com muitas falhas recentes é bloqueado temporariamente
-    remaining = _check_login_allowed(ip)
+    # Anti brute force: IP com muitas falhas recentes é bloqueado temporariamente (Redis com fallback)
+    remaining = await _check_login_allowed_redis(ip)
     if remaining:
         raise HTTPException(
             status_code=429,
@@ -311,7 +367,7 @@ async def login_start(body: LoginStartRequest, request: Request, db: AsyncSessio
     result = await db.execute(select(User).where(sa_func.lower(User.display_name) == nick.lower()))
     user = result.scalar_one_or_none()
     if not user or not user.password_hash or not verify_password(body.password, user.password_hash):
-        _record_failed_login(ip)
+        await _record_failed_login_redis(ip)
         raise HTTPException(status_code=401, detail="Nick ou senha incorretos.")
 
     # IP banido não pode logar; conta banida também não
@@ -322,12 +378,14 @@ async def login_start(body: LoginStartRequest, request: Request, db: AsyncSessio
 
     user.last_ip = ip
     session_id = f"sessao_{uuid.uuid4().hex[:12]}"
-    _pending_login[session_id] = {"user_id": user.id}
+    challenge = _gen_challenge()
+    _pending_login[session_id] = {"user_id": user.id, "challenge": challenge}
+    await _store_webauthn_challenge(session_id, challenge)
 
     return {
         "session_id": session_id,
         "options": {
-            "challenge": "dGVzdGVfY2hhbGxlbmdlX2xvZ2lu",
+            "challenge": challenge,
             "timeout": 60000,
             "rpId": _rp_id(request)
         }
@@ -357,10 +415,13 @@ async def login_finish(body: LoginFinishRequest, db: AsyncSession = Depends(get_
 
 @router.post("/passkeys/add/start")
 async def add_passkey_start(body: PasskeyAddStartRequest, request: Request, current_user_id: uuid.UUID = Depends(get_current_user_id)):
+    session_id = f"sessao_{uuid.uuid4().hex[:12]}"
+    challenge = _gen_challenge()
+    await _store_webauthn_challenge(session_id, challenge)
     return {
-        "session_id": f"sessao_{uuid.uuid4().hex[:12]}",
+        "session_id": session_id,
         "options": {
-            "challenge": "dGVzdGVfY2hhbGxlbmdlX2FkZA",
+            "challenge": challenge,
             "rp": {"name": settings.RP_NAME, "id": _rp_id(request)},
             "user": {"id": "dXNlcl8xMjM", "name": "usuario", "displayName": "Explorador"},
             "pubKeyCredParams": [{"type": "public-key", "alg": -7}],
@@ -422,6 +483,54 @@ async def get_me(request: Request, current_user_id: uuid.UUID = Depends(get_curr
         "banned": banned,
         "banned_detail": ban_detail,
     }
+
+@router.get("/export")
+async def export_data(current_user_id: uuid.UUID = Depends(get_current_user_id), db: AsyncSession = Depends(get_db)):
+    """LGPD - Portabilidade: retorna todos os dados do titular em JSON."""
+    user = await db.get(User, current_user_id)
+    if not user:
+        raise HTTPException(status_code=404, detail="Usuário não encontrado")
+    discs = (await db.execute(select(Discovery).where(Discovery.user_id == current_user_id))).scalars().all()
+    favs = (await db.execute(select(Favorite).where(Favorite.user_id == current_user_id))).scalars().all()
+    achs = (await db.execute(select(Achievement).where(Achievement.user_id == current_user_id))).scalars().all()
+    msgs = (await db.execute(select(ChatMessage).where(ChatMessage.user_id == current_user_id).order_by(ChatMessage.created_at.desc()).limit(500))).scalars().all()
+    bans = (await db.execute(select(BanRequest).where(BanRequest.target_user_id == current_user_id))).scalars().all()
+    return {
+        "user": {
+            "id": str(user.id),
+            "display_name": user.display_name,
+            "country": user.country,
+            "created_at": user.created_at.isoformat() if user.created_at else None,
+            "last_login": user.last_login.isoformat() if user.last_login else None,
+            "last_ip": user.last_ip,
+            "is_banned": bool(user.is_banned),
+            "xp": user.xp,
+            "total_time_seconds": user.total_time_seconds,
+        },
+        "passkeys": [{"device_name": p.device_name, "created_at": p.created_at.isoformat()} for p in (await db.execute(select(Passkey).where(Passkey.user_id == current_user_id))).scalars().all()],
+        "discoveries": [{"species_id": d.species_id, "kingdom": d.kingdom, "discovered_at": d.discovered_at.isoformat()} for d in discs],
+        "favorites": [{"item_type": f.item_type, "item_id": f.item_id, "created_at": f.created_at.isoformat()} for f in favs],
+        "achievements": [{"code": a.code, "unlocked_at": a.unlocked_at.isoformat()} for a in achs],
+        "chat_messages": [{"channel": m.channel, "content": m.content, "created_at": m.created_at.isoformat()} for m in msgs],
+        "ban_requests": [{"id": str(b.id), "reason": b.reason, "status": b.status, "created_at": b.created_at.isoformat()} for b in bans],
+    }
+
+@router.delete("/me")
+async def delete_me(request: Request, current_user_id: uuid.UUID = Depends(get_current_user_id), db: AsyncSession = Depends(get_db), credentials: HTTPAuthorizationCredentials | None = Depends(security)):
+    """LGPD - Direito ao esquecimento: apaga a conta e todos os dados vinculados."""
+    user = await db.get(User, current_user_id)
+    if not user:
+        raise HTTPException(status_code=404, detail="Usuário não encontrado")
+    # Revoga o token atual
+    if credentials is not None:
+        try:
+            revoke_token(credentials.credentials)
+        except Exception:
+            pass
+    # Cascade delete-orphan cuida de passkeys, achievements, favorites, discoveries, settings, chat_messages
+    await db.delete(user)
+    await db.commit()
+    return {"status": "deleted"}
 
 @router.post("/logout")
 async def logout(credentials: HTTPAuthorizationCredentials | None = Depends(security)):
