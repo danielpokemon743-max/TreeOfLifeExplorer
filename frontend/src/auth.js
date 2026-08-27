@@ -100,12 +100,19 @@ export async function registerPasskey(displayName, password, deviceName, country
 
 function _getTurnstileToken() {
   try {
+    if (typeof window !== 'undefined' && window._turnstileToken) return window._turnstileToken;
     if (typeof window !== 'undefined' && window.turnstile && typeof window.turnstile.getResponse === 'function') {
-      const el = document.querySelector('#cf-turnstile');
-      if (el) {
-        const t = window.turnstile.getResponse(el) || window.turnstile.getResponse();
+      if (window._turnstileWidgetId) {
+        const t = window.turnstile.getResponse(window._turnstileWidgetId);
         if (t) return t;
       }
+      const el = document.querySelector('#cf-turnstile');
+      if (el && el.dataset.widgetId) {
+        const t2 = window.turnstile.getResponse(el.dataset.widgetId);
+        if (t2) return t2;
+      }
+      const t3 = window.turnstile.getResponse();
+      if (t3) return t3;
     }
   } catch {}
   return null;

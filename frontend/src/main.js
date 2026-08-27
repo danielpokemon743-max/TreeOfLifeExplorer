@@ -3334,7 +3334,10 @@ async function initTurnstile() {
         cf.setAttribute('data-sitekey', data.sitekey);
         const tryRender = () => {
           if (window.turnstile && typeof window.turnstile.render === 'function' && !cf.dataset.rendered) {
-            try { window.turnstile.render(cf, {sitekey: data.sitekey, theme: 'dark'}); cf.dataset.rendered = '1'; } catch {}
+            try {
+              const wid = window.turnstile.render(cf, {sitekey: data.sitekey, theme: 'dark', callback: (tok) => { window._turnstileToken = tok; }});
+              cf.dataset.widgetId = wid; window._turnstileWidgetId = wid; cf.dataset.rendered = '1';
+            } catch {}
           } else if (!window.turnstile) {
             setTimeout(tryRender, 500);
           }
