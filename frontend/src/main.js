@@ -755,7 +755,7 @@ const NON_BIOLOGICAL_PATTERNS = [
   /^pessoa/i, /^aviao/i, /^lingua/i, /^livro/i, /^monstro/i,
   /^edificio/i, /^cidade/i, /^pais$/i, /^estado/i, /^regiao/i,
   /^cifra/i, /^linguagem/i, /^crenca/i,
-  /fobia/i, /^medo/i, /^aversao/i, /^sentimento/i,
+  /\bfobia\b/i, /^medo/i, /^aversao/i, /^sentimento/i,
   /^psicologa/i, /^parasitologa/i, /^biologa/i, /^profissao/i,
 ];
 
@@ -2446,8 +2446,12 @@ function isNonBiologicalExtract(text) {
   const defMatch = /(^|[.;,«„:!?\-—\s])(é|é o|é a|é um|é uma|é um dos|é uma das|trata-se de um|trata-se de uma|é conhecid[ao] como)\s+(muito |pouco |também )?(um |uma |o |a )?([a-zçáéíóúâêôãõàãõ\- ]+)/i.exec(firstSentence);
   if (defMatch) {
     const predicate = normalizeStr(defMatch[0]);
+    // Só analisa o núcleo da definição (primeira vírgula, primeiras 5 palavras)
+    // para não flagar menções incidentais como "de cor" em "espécie de tubarão de cor..."
+    const head = predicate.split(',')[0].trim().split(/\s+/).slice(0, 5).join(' ');
     for (const w of NON_BIO_DESC_WORDS) {
-      if (predicate.includes(w)) return true;
+      const wn = normalizeStr(w);
+      if (wn && head.includes(wn)) return true;
     }
   }
 
@@ -2463,10 +2467,9 @@ const NON_BIO_DESC_WORDS = [
   'avião', 'aviao', 'sentimento', 'crença', 'crenca', 'linguagem', 'idioma',
   'língua', 'lingua', 'profissão', 'profissao', 'marca', 'rei', 'rainha',
   'imperador', 'música', 'musica', 'canção', 'cancao', 'fobia', 'medo',
-  'doença', 'doenca', 'síndrome', 'sindrome', 'transtorno', 'conceito',
   'divindade', 'personagem', 'elemento químico', 'elemento quimico',
   'figura mitológica', 'figura mitologica', 'obra de ficção', 'obra de ficcao',
-  'cor', 'deus', 'deusa', 'anjo', 'demônio', 'demonio', 'espírito', 'espirito',
+  'deus', 'deusa', 'anjo', 'demônio', 'demonio', 'espírito', 'espirito',
   'fantasma', 'dragão', 'dragao', 'unicórnio', 'unicornio', 'quimera',
   'centauro', 'zumbi', 'vampiro', 'lobisomem', 'sereia', 'ciclope', 'fênix',
   'fenix', 'bruxa', 'feiticeiro', 'mago', 'biólogo', 'biologo', 'bióloga',
