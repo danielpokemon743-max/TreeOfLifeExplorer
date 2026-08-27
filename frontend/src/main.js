@@ -3343,11 +3343,12 @@ async function initTurnstile() {
           }
         };
         tryRender();
-        // fallback: só volta ao captcha matemático se o Turnstile realmente não renderizou
+        // fallback: só volta ao captcha matemático se o Turnstile realmente não renderizou e não tem token
         setTimeout(() => {
           const hasContent = cf && (cf.children.length > 0 || cf.querySelector('iframe'));
           const wasRendered = cf && cf.dataset.rendered === '1';
-          if (!hasContent && !wasRendered) {
+          const hasToken = window._turnstileToken || (window.turnstile && window._turnstileWidgetId && window.turnstile.getResponse(window._turnstileWidgetId));
+          if (!hasContent && !wasRendered && !hasToken) {
             if (widget) widget.style.display = 'none';
             if (box) { box.style.display = 'block'; refreshCaptcha(); }
           }
@@ -3422,12 +3423,24 @@ if (btnLoginPasskey) {
     const dispName = dispNameEl ? dispNameEl.value.trim() : '';
     const password = passEl ? passEl.value : '';
     const captchaAnswer = _captchaAnswerEl ? parseInt(_captchaAnswerEl.value, 10) : NaN;
+    const turnWidget = document.getElementById('turnstile-widget');
+    const isTurnstileVisible = turnWidget && turnWidget.style.display !== 'none';
+    let turnTok = null;
+    try {
+      if (isTurnstileVisible) {
+        turnTok = window._turnstileToken || (window.turnstile && window._turnstileWidgetId ? window.turnstile.getResponse(window._turnstileWidgetId) : null) || (window.turnstile ? window.turnstile.getResponse() : null);
+      }
+    } catch {}
 
     if (!dispName) return alert('Digite seu nick.');
     if (!password) return alert('Digite sua senha.');
-    if (!_captchaId || !Number.isFinite(captchaAnswer)) {
-      alert('Resolva o captcha para entrar (digite o resultado da conta).');
-      return;
+    if (isTurnstileVisible) {
+      if (!turnTok) { alert('Resolva o Turnstile antes de entrar (clique na caixa).'); return; }
+    } else {
+      if (!_captchaId || !Number.isFinite(captchaAnswer)) {
+        alert('Resolva o captcha para entrar (digite o resultado da conta).');
+        return;
+      }
     }
 
     try {
@@ -3435,9 +3448,11 @@ if (btnLoginPasskey) {
       sounds.playSFX('success');
       alert('Autenticado com sucesso!');
       await updateAuthUI();
+      try { if (window.turnstile && window._turnstileWidgetId) { window.turnstile.reset(window._turnstileWidgetId); window._turnstileToken = null; } } catch {}
     } catch (err) {
       alert(`Erro na autenticação: ${err.message}`);
-      refreshCaptcha(); // resposta pode ter sido consumida no servidor
+      refreshCaptcha();
+      try { if (window.turnstile && window._turnstileWidgetId) { window.turnstile.reset(window._turnstileWidgetId); window._turnstileToken = null; } } catch {}
     }
   });
 }
