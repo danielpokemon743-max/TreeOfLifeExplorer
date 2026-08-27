@@ -309,7 +309,7 @@ async def new_captcha():
 @router.get("/turnstile-config")
 async def turnstile_config():
     """Retorna sitekey do Turnstile se configurado."""
-    return {"sitekey": settings.TURNSTILE_SITEKEY or None, "enabled": bool(settings.TURNSTILE_SECRET and settings.TURNSTILE_SITEKEY)}
+    return {"sitekey": settings.TURNSTILE_SITEKEY or None, "enabled": bool(settings.TURNSTILE_SITEKEY)}
 
 @router.get("/detect-ip")
 async def detect_ip(request: Request):
