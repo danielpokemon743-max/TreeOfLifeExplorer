@@ -11,7 +11,7 @@ _GEO_CACHE: dict[str, tuple[float, dict | None]] = {}
 _GEO_CACHE_TTL_SECONDS = 24 * 3600   # mantém por 24h
 _GEO_HTTP_TIMEOUT = 5.0
 _IP_API_URL = (
-    "http://ip-api.com/json/{ip}"
+    "https://ip-api.com/json/{ip}"
     "?fields=status,countryCode,country,regionName,lat,lon"
 )
 # IPs que nunca serão consultados (localhost / inválidos)

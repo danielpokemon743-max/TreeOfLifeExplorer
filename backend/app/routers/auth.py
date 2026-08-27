@@ -9,10 +9,14 @@ from pydantic import BaseModel
 from app.database import get_db
 from app.models import User, Passkey, Discovery, Favorite, Achievement, IpBan
 from app.config import settings
+from fastapi.security import HTTPAuthorizationCredentials
+
 from app.security import (
     create_access_token,
     get_current_user_id,
     hash_password,
+    revoke_token,
+    security,
     verify_password,
     nickname_is_inappropriate,
     MAX_NICK_LENGTH,
@@ -420,5 +424,10 @@ async def get_me(request: Request, current_user_id: uuid.UUID = Depends(get_curr
     }
 
 @router.post("/logout")
-async def logout():
+async def logout(credentials: HTTPAuthorizationCredentials | None = Depends(security)):
+    if credentials is not None:
+        try:
+            revoke_token(credentials.credentials)
+        except Exception:
+            pass
     return {"status": "logged_out"}

@@ -4,9 +4,19 @@ const cors = require('cors');
 
 const app = express();
 
-// Libera o CORS explicitamente para evitar bloqueios do navegador
+// CORS restrito: em produção só permite FRONTEND_URL, em dev libera localhost
+const _allowedOrigins = (process.env.FRONTEND_URL || process.env.PUBLIC_URL || "").split(",").map(s=>s.trim()).filter(Boolean);
 app.use(cors({
-  origin: '*', // Permite qualquer origem local se conectar durante o desenvolvimento
+  origin: function(origin, callback) {
+    // server.js é legado (porta 3000, curation). Em produção este servidor nem deve ser exposto.
+    if (process.env.PRODUCTION === 'true' || process.env.NODE_ENV === 'production') {
+      if (!origin) return callback(null, true);
+      if (_allowedOrigins.includes(origin)) return callback(null, true);
+      return callback(new Error('CORS não permitido em produção'));
+    }
+    // dev: libera localhost
+    return callback(null, true);
+  },
   methods: ['GET', 'POST', 'DELETE'],
   allowedHeaders: ['Content-Type']
 }));

@@ -184,14 +184,27 @@ def text_contains_bad_words(text: str) -> bool:
     """
     return nickname_is_inappropriate(text)
 
+_REVOKED_JTIS: set[str] = set()
+
 def create_access_token(user_id: uuid.UUID) -> str:
-    expire = datetime.now(timezone.utc) + timedelta(days=ACCESS_TOKEN_EXPIRE_DAYS)
-    to_encode = {"sub": str(user_id), "exp": expire}
+    expire = datetime.now(timezone.utc) + timedelta(days=settings.JWT_EXPIRE_DAYS)
+    to_encode = {"sub": str(user_id), "exp": expire, "jti": uuid.uuid4().hex, "iat": datetime.now(timezone.utc).timestamp()}
     return jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
+
+def revoke_token(token: str) -> None:
+    try:
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM], options={"verify_exp": False})
+        jti = payload.get("jti")
+        if jti:
+            _REVOKED_JTIS.add(jti)
+    except Exception:
+        pass
 
 def verify_token(token: str) -> uuid.UUID | None:
     try:
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        if payload.get("jti") in _REVOKED_JTIS:
+            return None
         user_id = payload.get("sub")
         if user_id is None:
             return None

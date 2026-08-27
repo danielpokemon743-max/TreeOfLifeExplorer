@@ -21,7 +21,7 @@ class Settings(BaseSettings):
     # JWT
     JWT_SECRET: str = "SEU_SECRET_SUPER_SEGURO_AQUI_32_BYTES"
     JWT_ALGORITHM: str = "HS256"
-    JWT_EXPIRE_DAYS: int = 30
+    JWT_EXPIRE_DAYS: int = 7
 
     # Em produção (true), desliga comandos de desenvolvimento (ex.: /level-dev)
     PRODUCTION: bool = False
