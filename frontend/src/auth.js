@@ -98,14 +98,28 @@ export async function registerPasskey(displayName, password, deviceName, country
   return data;
 }
 
+function _getTurnstileToken() {
+  try {
+    if (typeof window !== 'undefined' && window.turnstile && typeof window.turnstile.getResponse === 'function') {
+      const el = document.querySelector('#cf-turnstile');
+      if (el) {
+        const t = window.turnstile.getResponse(el) || window.turnstile.getResponse();
+        if (t) return t;
+      }
+    }
+  } catch {}
+  return null;
+}
+
 /**
  * 2. Login com Nick + Senha + Passkey
  */
 export async function loginPasskey(displayName, password, captchaId = '', captchaAnswer = null) {
+  const turnTok = _getTurnstileToken();
   const startRes = await fetch(`${API_BASE}/login/start`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ display_name: displayName, password, captcha_id: captchaId, captcha_answer: captchaAnswer })
+    body: JSON.stringify({ display_name: displayName, password, captcha_id: captchaId, captcha_answer: captchaAnswer, turnstile_token: turnTok })
   });
 
   if (!startRes.ok) {

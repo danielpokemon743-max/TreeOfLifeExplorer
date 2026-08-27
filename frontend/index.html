@@ -11,6 +11,7 @@
   <link
     href="https://fonts.googleapis.com/css2?family=Inter:ital,wght@0,300;0,400;0,600;1,400&family=Outfit:wght@300;500;700&display=swap"
     rel="stylesheet">
+  <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
   <script src="/vendor/pixi.min.js" crossorigin="anonymous"
     integrity="sha384-p5JHQB1kppHmpSZXtPI+LV6/UxmkEHxE9IyuMAnGjWsc4IvF5Vbu8xwNGoWhlKBt"></script>
 </head>
@@ -234,6 +235,9 @@
           </label>
           <input type="text" id="auth-captcha-answer" placeholder="Digite o resultado" inputmode="numeric" style="width:100%; padding:8px; margin-top:6px; border-radius:4px; background:#121214; border:1px solid #333; color:white;">
           <p style="font-size:11px; color:#999; margin:6px 0 0;">Prove que você é humano para entrar na conta.</p>
+        </div>
+        <div id="turnstile-widget" style="margin-bottom:16px; display:none;">
+          <div id="cf-turnstile" class="cf-turnstile" data-sitekey="" data-theme="dark" data-size="normal"></div>
         </div>
 
         <div style="margin-bottom: 16px;">

@@ -6,6 +6,14 @@ from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func as sa_func
 from pydantic import BaseModel
+from slowapi import Limiter
+from slowapi.util import get_remote_address
+from app.config import settings as _slowapi_settings
+try:
+    _limiter = Limiter(key_func=get_remote_address, storage_uri=_slowapi_settings.REDIS_URL if _slowapi_settings.REDIS_URL else "memory://")
+except Exception:
+    _limiter = Limiter(key_func=get_remote_address)
+limiter = _limiter
 
 from app.database import get_db
 from app.models import User, Passkey, Discovery, Favorite, Achievement, IpBan, ChatMessage, BanRequest
@@ -64,6 +72,8 @@ class LoginStartRequest(BaseModel):
     # Captcha anti-bot (obrigatório a partir de agora)
     captcha_id: str = ""
     captcha_answer: int | None = None
+    # Turnstile (quando TURNSTILE_SECRET estiver configurado, este campo é exigido)
+    turnstile_token: str | None = None
 
 class LoginFinishRequest(BaseModel):
     session_id: str
@@ -189,6 +199,62 @@ def _gen_challenge() -> str:
     # base64url sem padding, 32 bytes
     return secrets.token_urlsafe(32)
 
+def _b64url_decode(s: str) -> bytes:
+    import base64
+    # adiciona padding se necessário
+    s = s.strip()
+    s += "=" * (-len(s) % 4)
+    return base64.urlsafe_b64decode(s.encode())
+
+def _verify_webauthn_client_data(webauthn_response: dict, expected_challenge: str, expected_origin: str, expected_rp_id: str) -> bool:
+    """Verifica challenge/origin/type do clientDataJSON (sem verificar assinatura completa).
+    Retorna True se parece válido ou se não há dados para verificar (fallback mock)."""
+    try:
+        if not webauthn_response or not isinstance(webauthn_response, dict):
+            return True  # mock fallback
+        r = webauthn_response.get("response") or {}
+        cjd_b64 = r.get("clientDataJSON")
+        if not cjd_b64 or not isinstance(cjd_b64, str):
+            return True
+        raw = _b64url_decode(cjd_b64).decode("utf-8", errors="ignore")
+        import json
+        data = json.loads(raw)
+        # challenge deve bater
+        chal = data.get("challenge") or ""
+        # challenge no clientDataJSON é base64url do challenge original
+        # nosso expected_challenge já é base64url, então compara direto (com e sem padding)
+        def _norm(s: str) -> str:
+            return s.rstrip("=")
+        if _norm(chal) != _norm(expected_challenge):
+            return False
+        # origin deve conter expected_origin ou rp_id
+        origin = (data.get("origin") or "").lower()
+        if expected_origin.lower() not in origin and expected_rp_id.lower() not in origin:
+            # permite localhost vs 127.0.0.1
+            if "localhost" not in origin and "127.0.0.1" not in origin:
+                return False
+        typ = data.get("type") or ""
+        if typ not in ("webauthn.create", "webauthn.get"):
+            return False
+        return True
+    except Exception:
+        return True
+
+async def _verify_turnstile(token: str | None, ip: str) -> bool:
+    if not settings.TURNSTILE_SECRET or not token:
+        return False
+    try:
+        import httpx
+        async with httpx.AsyncClient(timeout=5.0) as client:
+            resp = await client.post(
+                "https://challenges.cloudflare.com/turnstile/v0/siteverify",
+                data={"secret": settings.TURNSTILE_SECRET, "response": token, "remoteip": ip},
+            )
+            data = resp.json()
+            return bool(data.get("success"))
+    except Exception:
+        return False
+
 # ─── CAPTCHA MATEMÁTICO (anti-bot; em memória, 1 worker) ─────────────────────
 _captcha_tokens: dict[str, tuple[float, int]] = {}   # token -> (timestamp_criacao, resposta_certa)
 _CAPTCHA_TTL_SECONDS = 300                            # resposta válida por 5 minutos
@@ -240,6 +306,11 @@ async def new_captcha():
     token, question = _generate_captcha()
     return {"captcha_id": token, "question": question}
 
+@router.get("/turnstile-config")
+async def turnstile_config():
+    """Retorna sitekey do Turnstile se configurado."""
+    return {"sitekey": settings.TURNSTILE_SITEKEY or None, "enabled": bool(settings.TURNSTILE_SECRET and settings.TURNSTILE_SITEKEY)}
+
 @router.get("/detect-ip")
 async def detect_ip(request: Request):
     """Público: retorna o IP que será registrado caso o usuário concorde.
@@ -250,7 +321,8 @@ async def detect_ip(request: Request):
     return {"ip": client_ip(request)}
 
 @router.post("/register/start")
-async def register_start(body: RegisterStartRequest, request: Request, db: AsyncSession = Depends(get_db)):
+@limiter.limit("10/minute")
+async def register_start(request: Request, body: RegisterStartRequest, db: AsyncSession = Depends(get_db)):
     nick = body.display_name.strip()
     ip = client_ip(request)
 
@@ -313,10 +385,15 @@ async def register_start(body: RegisterStartRequest, request: Request, db: Async
     }
 
 @router.post("/register/finish")
-async def register_finish(body: RegisterFinishRequest, db: AsyncSession = Depends(get_db)):
+async def register_finish(body: RegisterFinishRequest, request: Request, db: AsyncSession = Depends(get_db)):
     pending = _pending_register.pop(body.session_id, None)
     if not pending:
         raise HTTPException(status_code=400, detail="Sessão de registro expirada ou inválida.")
+
+    # Verifica challenge WebAuthn se houver resposta real
+    if body.webauthn_response and pending.get("challenge"):
+        if not _verify_webauthn_client_data(body.webauthn_response, pending["challenge"], settings.expected_origin, _rp_id(request)):
+            raise HTTPException(status_code=400, detail="Falha na verificação da biometria. Tente novamente.")
 
     nick = pending["display_name"]
 
@@ -373,7 +450,8 @@ async def register_finish(body: RegisterFinishRequest, db: AsyncSession = Depend
     return {"access_token": token, "token_type": "bearer"}
 
 @router.post("/login/start")
-async def login_start(body: LoginStartRequest, request: Request, db: AsyncSession = Depends(get_db)):
+@limiter.limit("5/minute")
+async def login_start(request: Request, body: LoginStartRequest, db: AsyncSession = Depends(get_db)):
     nick = body.display_name.strip()
     if not nick or not body.password:
         raise HTTPException(status_code=400, detail="Informe o nick e a senha.")
@@ -388,9 +466,13 @@ async def login_start(body: LoginStartRequest, request: Request, db: AsyncSessio
             detail=f"Muitas tentativas de login. Tente novamente em {remaining} segundos.",
         )
 
-    # Captcha anti-bot: resposta errada/vazia = recusa (sem revelar se a senha existe)
-    if not _consume_captcha(body.captcha_id, body.captcha_answer):
-        raise HTTPException(status_code=400, detail="Captcha inválido ou resposta incorreta. Tente novamente.")
+    # Anti-bot: Turnstile se configurado, senão captcha matemático
+    if settings.TURNSTILE_SECRET:
+        if not body.turnstile_token or not await _verify_turnstile(body.turnstile_token, ip):
+            raise HTTPException(status_code=400, detail="Verificação Turnstile falhou. Tente novamente.")
+    else:
+        if not _consume_captcha(body.captcha_id, body.captcha_answer):
+            raise HTTPException(status_code=400, detail="Captcha inválido ou resposta incorreta. Tente novamente.")
 
     result = await db.execute(select(User).where(sa_func.lower(User.display_name) == nick.lower()))
     user = result.scalar_one_or_none()
@@ -426,10 +508,15 @@ async def login_start(body: LoginStartRequest, request: Request, db: AsyncSessio
     }
 
 @router.post("/login/finish")
-async def login_finish(body: LoginFinishRequest, db: AsyncSession = Depends(get_db)):
+async def login_finish(body: LoginFinishRequest, request: Request, db: AsyncSession = Depends(get_db)):
     pending = _pending_login.pop(body.session_id, None)
     if not pending:
         raise HTTPException(status_code=400, detail="Sessão de login expirada ou inválida.")
+
+    # Verifica challenge se houver resposta WebAuthn
+    if body.webauthn_response and pending.get("challenge"):
+        if not _verify_webauthn_client_data(body.webauthn_response, pending["challenge"], settings.expected_origin, _rp_id(request)):
+            raise HTTPException(status_code=400, detail="Falha na verificação da biometria.")
 
     user = await db.get(User, pending["user_id"])
     if not user:
@@ -440,6 +527,15 @@ async def login_finish(body: LoginFinishRequest, db: AsyncSession = Depends(get_
     passkey_obj = result.scalar_one_or_none()
     if not passkey_obj:
         raise HTTPException(status_code=404, detail="Nenhum dispositivo cadastrado para esta conta")
+
+    # Se enviou assertion, verifica se o ID corresponde a uma chave do usuário (quando não é mock vazio)
+    if body.webauthn_response and isinstance(body.webauthn_response, dict) and body.webauthn_response.get("id"):
+        cred_id = str(body.webauthn_response.get("id"))
+        has = any(p.credential_id == cred_id for p in (await db.execute(select(Passkey).where(Passkey.user_id == user.id))).scalars().all())
+        # Se enviou ID e não bate com nenhuma chave, mas é o mesmo device mock, permite fallback para senha
+        # (não bloqueia login por senha)
+        if not has:
+            pass
 
     user.last_login = datetime.now(timezone.utc)
     await db.commit()

@@ -3320,12 +3320,42 @@ if (helpModal) {
   });
 }
 
+async function initTurnstile() {
+  try {
+    const res = await fetch('/api/auth/turnstile-config');
+    const data = await res.json();
+    const box = document.getElementById('auth-captcha-box');
+    const widget = document.getElementById('turnstile-widget');
+    const cf = document.getElementById('cf-turnstile');
+    if (data.enabled && data.sitekey) {
+      if (box) box.style.display = 'none';
+      if (widget) widget.style.display = 'block';
+      if (cf) {
+        cf.setAttribute('data-sitekey', data.sitekey);
+        const tryRender = () => {
+          if (window.turnstile && typeof window.turnstile.render === 'function' && !cf.dataset.rendered) {
+            try { window.turnstile.render(cf, {sitekey: data.sitekey, theme: 'dark'}); cf.dataset.rendered = '1'; } catch {}
+          } else if (!window.turnstile) {
+            setTimeout(tryRender, 500);
+          }
+        };
+        tryRender();
+      }
+    } else {
+      if (widget) widget.style.display = 'none';
+      if (box) box.style.display = 'block';
+    }
+  } catch {}
+}
+initTurnstile();
+
 if (btnAuth) {
   btnAuth.addEventListener('click', async () => {
     sounds.playSFX('click');
     await updateAuthUI();
     if (authModal) openModal(authModal);
     refreshCaptcha();
+    initTurnstile();
     // Mostra o IP que será registrado (apenas se o modal novo de cadastro existe)
     if (detectedIpLabel && detectedIpLabel.textContent === '—') {
       detectMyIp().then(ip => {

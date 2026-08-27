@@ -1,9 +1,13 @@
 import os
 from contextlib import asynccontextmanager
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
+from fastapi.responses import JSONResponse
 from starlette.middleware.base import BaseHTTPMiddleware
+from slowapi import Limiter
+from slowapi.util import get_remote_address
+from slowapi.errors import RateLimitExceeded
 from app.database import init_db
 from app.config import settings
 from app.routers import auth, progress, admin, ranking, chat, views, external, moderation
@@ -65,6 +69,13 @@ async def lifespan(app: FastAPI):
     yield
 
 app = FastAPI(lifespan=lifespan, title="Tree of Life Explorer API")
+
+limiter = Limiter(key_func=get_remote_address, storage_uri=settings.REDIS_URL if settings.REDIS_URL else "memory://")
+app.state.limiter = limiter
+
+@app.exception_handler(RateLimitExceeded)
+async def _rate_limit_handler(request: Request, exc: RateLimitExceeded):
+    return JSONResponse(status_code=429, content={"detail": f"Rate limit excedido. Tente novamente em {exc.detail}"})
 
 app.add_middleware(NoCacheHtmlMiddleware)
 app.add_middleware(
