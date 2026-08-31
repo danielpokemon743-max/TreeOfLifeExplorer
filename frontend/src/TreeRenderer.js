@@ -587,7 +587,7 @@ export class TreeRenderer {
     let removed = 0;
     const isSpecies = (n) => {
       const r = (n.rank || '').toLowerCase();
-      return r === 'species' || r === 'subspecies' || (n.name && n.name.trim().includes(' '));
+      return r === 'species' || r === 'subspecies';
     };
     const stack = [this.root];
     while (stack.length) {
