@@ -1892,7 +1892,8 @@ export async function executeSearch(queryText) {
   // Fallback via gênero: se a espécie não foi achada diretamente, busca o gênero e verifica se a espécie está entre seus filhos
   if (!foundNode && targetQuery.includes(' ')) {
     const genus = targetQuery.split(/\s+/)[0].trim();
-    if (genus && normalizeStr(genus) !== targetNorm) {
+    const targetNormLocal = normalizeStr(targetQuery);
+    if (genus && normalizeStr(genus) !== targetNormLocal) {
       let genusNode = findNodeInLocalData(genus);
       if (!genusNode) {
         for (let attempt = 0; attempt < 2 && !genusNode; attempt++) {
