@@ -612,6 +612,34 @@ export class TreeRenderer {
       const name = (n.name || '').trim();
       return r === 'no rank' && name.includes(' ') && /^[A-Z][a-z]+ [a-z]+/.test(name);
     };
+    // Varredura global: Homo sapiens só pode existir sob o gênero Homo
+    if (window.allTreeNodes) {
+      const homoGenus = window.allTreeNodes.find(n => canonicalize(n.name) === 'homo' && (n.rank||'').toLowerCase() === 'genus');
+      const toRemove = [];
+      for (const n of window.allTreeNodes) {
+        if (canonicalize(n.name) === 'homo sapiens' && n.parent && canonicalize(n.parent.name) !== 'homo') {
+          toRemove.push(n);
+        }
+      }
+      for (const n of toRemove) {
+        const p = n.parent;
+        if (p && p.children) {
+          const idx = p.children.indexOf(n);
+          if (idx !== -1) p.children.splice(idx, 1);
+        }
+        const gIdx = window.allTreeNodes.indexOf(n);
+        if (gIdx !== -1) window.allTreeNodes.splice(gIdx, 1);
+        if (window._nodeById) {
+          if (n.id) window._nodeById.delete(String(n.id));
+          if (n.primaryId) window._nodeById.delete(String(n.primaryId));
+          if (n.colId) window._nodeById.delete(String(n.colId));
+        }
+        // também remove do mapa global
+        if (window._globalCanonical) window._globalCanonical.delete(canonicalize(n.name));
+        removed++;
+      }
+      if (toRemove.length) console.log(`🧹 prune: removidos ${toRemove.length} Homo sapiens fora do gênero Homo`);
+    }
     const stack = [this.root];
     while (stack.length) {
       const node = stack.pop();
