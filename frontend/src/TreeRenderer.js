@@ -587,8 +587,14 @@ export class TreeRenderer {
     let removed = 0;
     const isSpecies = (n) => {
       const r = (n.rank || '').toLowerCase();
-      return r === 'species' || r === 'subspecies';
+      if (r === 'species' || r === 'subspecies') return true;
+      // COL às vezes vem como "no rank" para espécies fósseis (ex.: Homo erectus)
+      // Detecta binomial "Genus species" como espécie mesmo sem rank
+      const name = (n.name || '').trim();
+      return r === 'no rank' && name.includes(' ') && /^[A-Z][a-z]+ [a-z]+/.test(name);
     };
+    // Dedupe global para Homo sapiens (id 6MB3T aparece sob cada Homo)
+    const seenHomoSapiensParent = new Set();
     const stack = [this.root];
     while (stack.length) {
       const node = stack.pop();
