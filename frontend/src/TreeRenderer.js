@@ -666,20 +666,36 @@ export class TreeRenderer {
           continue;
         }
       }
-      // Espécies/subespécies (ou binomiais) nunca devem ter filhos — remove qualquer filho
+      // Espécies/subespécies só podem ter filhos mais específicos (ex.: subespécie), não outra espécie
       if (isSpecies(node)) {
-        for (const c of node.children) {
-          const idx = window.allTreeNodes ? window.allTreeNodes.indexOf(c) : -1;
-          if (idx !== -1) window.allTreeNodes.splice(idx, 1);
-          if (window._nodeById) {
-            if (c.id) window._nodeById.delete(String(c.id));
-            if (c.primaryId) window._nodeById.delete(String(c.primaryId));
-            if (c.colId) window._nodeById.delete(String(c.colId));
+        const pIdx = getRankIndex(node.rank);
+        // Se rank é "no rank" mas é binomial, trata como espécie (índice de espécie)
+        const pIdxEff = pIdx !== -1 ? pIdx : RANK_ORDER.indexOf('species');
+        const before = node.children.length;
+        node.children = node.children.filter(c => {
+          const cIdx = getRankIndex(c.rank);
+          // se filho também é espécie/subespécie binomial sem rank, trata como espécie
+          let cIdxEff = cIdx;
+          if (cIdx === -1 && c.name && c.name.trim().includes(' ') && /^[A-Z][a-z]+ [a-z]+/.test(c.name.trim())) {
+            cIdxEff = RANK_ORDER.indexOf('species');
           }
-          removed++;
+          if (cIdxEff !== -1 && cIdxEff <= pIdxEff) {
+            const idx = window.allTreeNodes ? window.allTreeNodes.indexOf(c) : -1;
+            if (idx !== -1) window.allTreeNodes.splice(idx, 1);
+            if (window._nodeById) {
+              if (c.id) window._nodeById.delete(String(c.id));
+              if (c.primaryId) window._nodeById.delete(String(c.primaryId));
+              if (c.colId) window._nodeById.delete(String(c.colId));
+            }
+            removed++;
+            return false;
+          }
+          return true;
+        });
+        if (node.children.length !== before) {
+          for (const c of node.children) stack.push(c);
+          continue;
         }
-        node.children = [];
-        continue;
       }
       const pIdx = getRankIndex(node.rank);
       const before = node.children.length;
