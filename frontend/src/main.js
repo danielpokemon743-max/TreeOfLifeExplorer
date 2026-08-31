@@ -1665,6 +1665,10 @@ window._nodeById = new Map();
       onExpand: fetchExternalChildren 
     });
     renderer.setRoot(rootNode);
+    // Remove ligações inválidas que possam ter vindo do TSV (ex.: espécie sob espécie)
+    if (typeof renderer.pruneInvalidRanks === 'function') {
+      try { renderer.pruneInvalidRanks(); } catch {}
+    }
     initSearchModule(renderer, rootNode);
     if (statsLoading) statsLoading.style.display = 'none';
     updateStats();
@@ -1932,6 +1936,11 @@ export async function executeSearch(queryText) {
         anc.expanded = true;
       }
       anc = anc.parent;
+    }
+
+    // Remove ligações inválidas (ex.: espécie sob espécie) que podem ter surgido via cache
+    if (rendererInstance && typeof rendererInstance.pruneInvalidRanks === 'function') {
+      try { rendererInstance.pruneInvalidRanks(); } catch {}
     }
 
     sounds.playSFX('success');

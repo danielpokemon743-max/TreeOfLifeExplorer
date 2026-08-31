@@ -18,6 +18,9 @@ const RANK_SIZE = {
   class: 5, order: 4, family: 3.5, genus: 3, species: 2.5,
 };
 const DEFAULT_R = 3;
+
+const RANK_ORDER = ['life','domain','superkingdom','kingdom','subkingdom','phylum','subphylum','superclass','class','subclass','superorder','order','suborder','infraorder','parvorder','superfamily','family','subfamily','tribe','subtribe','genus','subgenus','section','subsection','species','subspecies','variety','form','forma'];
+function getRankIndex(rank){ return RANK_ORDER.indexOf((rank||'').toLowerCase()); }
  
 // Conversor de cor puro (funciona em qualquer versão do PixiJS)
 function parseColorHex(colorStr) {
@@ -560,8 +563,13 @@ export class TreeRenderer {
     if (!raw || raw.length === 0) return;
   
     const isBio = (typeof window.isBiologicalName === 'function') ? window.isBiologicalName : null;
+    const pIdx = getRankIndex(node.rank);
     const incoming = raw
-      .filter(c => !isBio || isBio(c.name || ''))
+      .filter(c => {
+        const cIdx = getRankIndex(c.rank);
+        if (pIdx !== -1 && cIdx !== -1 && cIdx <= pIdx) return false;
+        return !isBio || isBio(c.name || '');
+      })
       .map(c => {
       const child = new TreeNode(
         { ott_id: c.ott_id, name: c.name, rank: c.rank },
@@ -573,7 +581,40 @@ export class TreeRenderer {
     });
     _mergeChildren(node, incoming);
   }
- 
+
+  pruneInvalidRanks() {
+    if (!this.root) return;
+    let removed = 0;
+    const stack = [this.root];
+    while (stack.length) {
+      const node = stack.pop();
+      if (!node.children || node.children.length === 0) continue;
+      const pIdx = getRankIndex(node.rank);
+      const before = node.children.length;
+      node.children = node.children.filter(c => {
+        const cIdx = getRankIndex(c.rank);
+        if (pIdx !== -1 && cIdx !== -1 && cIdx <= pIdx) {
+          const idx = window.allTreeNodes ? window.allTreeNodes.indexOf(c) : -1;
+          if (idx !== -1) window.allTreeNodes.splice(idx, 1);
+          if (window._nodeById) {
+            if (c.id) window._nodeById.delete(String(c.id));
+            if (c.primaryId) window._nodeById.delete(String(c.primaryId));
+            if (c.colId) window._nodeById.delete(String(c.colId));
+          }
+          removed++;
+          return false;
+        }
+        return true;
+      });
+      for (const c of node.children) stack.push(c);
+    }
+    if (removed > 0) {
+      console.log(`🧹 pruneInvalidRanks: ${removed} ligação(ões) inválida(s) removida(s) (ex.: espécie sob espécie)`);
+      this._recomputeLayout();
+      this._requestRender();
+    }
+  }
+
   _loop() {
     const tick = () => {
       let needsNextFrame = false;
