@@ -588,17 +588,35 @@ export class TreeRenderer {
     const isSpecies = (n) => {
       const r = (n.rank || '').toLowerCase();
       if (r === 'species' || r === 'subspecies') return true;
-      // COL às vezes vem como "no rank" para espécies fósseis (ex.: Homo erectus)
-      // Detecta binomial "Genus species" como espécie mesmo sem rank
       const name = (n.name || '').trim();
       return r === 'no rank' && name.includes(' ') && /^[A-Z][a-z]+ [a-z]+/.test(name);
     };
-    // Dedupe global para Homo sapiens (id 6MB3T aparece sob cada Homo)
-    const seenHomoSapiensParent = new Set();
     const stack = [this.root];
     while (stack.length) {
       const node = stack.pop();
       if (!node.children || node.children.length === 0) continue;
+      // Caso específico: Homo sapiens só pode ser filho do gênero Homo
+      if (node.name !== 'Homo' && node.name.startsWith('Homo ')) {
+        const beforeHomo = node.children.length;
+        node.children = node.children.filter(c => {
+          if (c.name === 'Homo sapiens') {
+            const idx = window.allTreeNodes ? window.allTreeNodes.indexOf(c) : -1;
+            if (idx !== -1) window.allTreeNodes.splice(idx, 1);
+            if (window._nodeById) {
+              if (c.id) window._nodeById.delete(String(c.id));
+              if (c.primaryId) window._nodeById.delete(String(c.primaryId));
+              if (c.colId) window._nodeById.delete(String(c.colId));
+            }
+            removed++;
+            return false;
+          }
+          return true;
+        });
+        if (node.children.length !== beforeHomo) {
+          for (const c of node.children) stack.push(c);
+          continue;
+        }
+      }
       // Espécies/subespécies (ou binomiais) nunca devem ter filhos — remove qualquer filho
       if (isSpecies(node)) {
         for (const c of node.children) {
