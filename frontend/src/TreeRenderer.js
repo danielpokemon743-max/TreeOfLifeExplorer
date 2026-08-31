@@ -54,8 +54,9 @@ function _mergeChildren(node, incoming) {
     const nm = (c.name || '').toLowerCase();
     const can = canonicalize(c.name);
     if (existing.has(k) || names.has(nm) || existingCan.has(can)) continue;
-    // Bloqueio direto: Homo sapiens só pode ser filho do gênero Homo
-    if (can === 'homo sapiens' && canonicalize(node.name) !== 'homo') continue;
+    // Bloqueio direto: Homo sapiens só pode ser filho do gênero Homo (qualquer variação)
+    const isHomoSapiens = can === 'homo sapiens' || (c.name && c.name.toLowerCase().includes('homo sapiens'));
+    if (isHomoSapiens && canonicalize(node.name) !== 'homo') continue;
     // global dedup: Homo sapiens já existe sob Homo (gênero) não duplica sob espécie
     if (globalCan && globalCan.has(can)) {
       const owner = globalCan.get(can);
@@ -612,13 +613,15 @@ export class TreeRenderer {
       const name = (n.name || '').trim();
       return r === 'no rank' && name.includes(' ') && /^[A-Z][a-z]+ [a-z]+/.test(name);
     };
-    // Varredura global: Homo sapiens só pode existir sob o gênero Homo
+    // Varredura global: Homo sapiens só pode existir sob o gênero Homo (qualquer variação com autor)
     if (window.allTreeNodes) {
-      const homoGenus = window.allTreeNodes.find(n => canonicalize(n.name) === 'homo' && (n.rank||'').toLowerCase() === 'genus');
       const toRemove = [];
       for (const n of window.allTreeNodes) {
-        if (canonicalize(n.name) === 'homo sapiens' && n.parent && canonicalize(n.parent.name) !== 'homo') {
-          toRemove.push(n);
+        const can = canonicalize(n.name);
+        if (can === 'homo sapiens' || (n.name && n.name.toLowerCase().includes('homo sapiens'))) {
+          if (n.parent && canonicalize(n.parent.name) !== 'homo') {
+            toRemove.push(n);
+          }
         }
       }
       for (const n of toRemove) {
