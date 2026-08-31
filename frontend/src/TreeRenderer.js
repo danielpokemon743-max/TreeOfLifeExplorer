@@ -54,6 +54,8 @@ function _mergeChildren(node, incoming) {
     const nm = (c.name || '').toLowerCase();
     const can = canonicalize(c.name);
     if (existing.has(k) || names.has(nm) || existingCan.has(can)) continue;
+    // Bloqueio direto: Homo sapiens só pode ser filho do gênero Homo
+    if (can === 'homo sapiens' && canonicalize(node.name) !== 'homo') continue;
     // global dedup: Homo sapiens já existe sob Homo (gênero) não duplica sob espécie
     if (globalCan && globalCan.has(can)) {
       const owner = globalCan.get(can);
