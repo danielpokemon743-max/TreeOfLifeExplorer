@@ -1721,20 +1721,36 @@ async function fetchAndInsertExternalTaxon(queryText) {
   try {
     const targetNorm = normalizeStr(queryText);
 
-    const searchRes = await fetch(`https://api.checklistbank.org/dataset/3LR/nameusage/search?q=${encodeURIComponent(queryText)}&limit=10`);
+    const searchRes = await fetch(`https://api.checklistbank.org/dataset/3LR/nameusage/search?q=${encodeURIComponent(queryText)}&limit=20`);
     if (!searchRes.ok) return null;
     const searchData = await searchRes.json();
 
     const results = searchData.result;
     if (!results || results.length === 0) return null;
 
-    // Usa apenas o resultado cujo nome corresponde EXATAMENTE ao que foi digitado
-    // (após normalizar maiúsculas/minúsculas e acentos) — evita nomes relacionados.
-    const targetUsage = results.find(r => {
+    // Tenta correspondência exata primeiro, depois variações com autor/data ou nome canônico
+    let targetUsage = results.find(r => {
       const usageName = r.usage?.name;
       const sciName = usageName?.scientificName || usageName?.name || r.name || '';
       return normalizeStr(sciName) === targetNorm;
     });
+    if (!targetUsage) {
+      targetUsage = results.find(r => {
+        const usageName = r.usage?.name;
+        const sciName = normalizeStr(usageName?.scientificName || usageName?.name || r.name || '');
+        const canonical = normalizeStr(usageName?.canonicalName || '');
+        // aceita "Homo erectus Dubois, 1892" quando busca é "Homo erectus"
+        return sciName === targetNorm || canonical === targetNorm ||
+               sciName.startsWith(targetNorm + ' ') || sciName.startsWith(targetNorm + ',');
+      });
+    }
+    if (!targetUsage) {
+      // último fallback: pega o primeiro que contém o nome buscado (evita subespécies distantes)
+      targetUsage = results.find(r => {
+        const sciName = normalizeStr(r.usage?.name?.scientificName || r.usage?.name?.name || r.name || '');
+        return sciName.includes(targetNorm);
+      });
+    }
     if (!targetUsage) return null;
 
     const taxonId = targetUsage.id;
@@ -1871,6 +1887,28 @@ export async function executeSearch(queryText) {
       foundNode = await fetchAndInsertExternalTaxon(targetQuery);
     }
     if (statsLoading) statsLoading.style.display = 'none';
+  }
+
+  // Fallback via gênero: se a espécie não foi achada diretamente, busca o gênero e verifica se a espécie está entre seus filhos
+  if (!foundNode && targetQuery.includes(' ')) {
+    const genus = targetQuery.split(/\s+/)[0].trim();
+    if (genus && normalizeStr(genus) !== targetNorm) {
+      let genusNode = findNodeInLocalData(genus);
+      if (!genusNode) {
+        for (let attempt = 0; attempt < 2 && !genusNode; attempt++) {
+          if (attempt > 0) await new Promise(r => setTimeout(r, 500));
+          genusNode = await fetchAndInsertExternalTaxon(genus);
+        }
+      }
+      if (genusNode && rendererInstance && typeof rendererInstance._loadChildren === 'function') {
+        try { await rendererInstance._loadChildren(genusNode, true); genusNode.expanded = true; } catch {}
+        foundNode = findNodeInLocalData(targetQuery);
+        if (!foundNode) {
+          const child = (genusNode.children || []).find(c => normalizeStr(c.name) === normalizeStr(targetQuery));
+          if (child) foundNode = child;
+        }
+      }
+    }
   }
  
   if (foundNode) {
