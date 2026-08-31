@@ -589,6 +589,21 @@ export class TreeRenderer {
     while (stack.length) {
       const node = stack.pop();
       if (!node.children || node.children.length === 0) continue;
+      // Espécies/subespécies nunca devem ter filhos — remove qualquer filho
+      if (node.rank === 'species' || node.rank === 'subspecies') {
+        for (const c of node.children) {
+          const idx = window.allTreeNodes ? window.allTreeNodes.indexOf(c) : -1;
+          if (idx !== -1) window.allTreeNodes.splice(idx, 1);
+          if (window._nodeById) {
+            if (c.id) window._nodeById.delete(String(c.id));
+            if (c.primaryId) window._nodeById.delete(String(c.primaryId));
+            if (c.colId) window._nodeById.delete(String(c.colId));
+          }
+          removed++;
+        }
+        node.children = [];
+        continue;
+      }
       const pIdx = getRankIndex(node.rank);
       const before = node.children.length;
       node.children = node.children.filter(c => {
