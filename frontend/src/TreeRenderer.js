@@ -585,12 +585,16 @@ export class TreeRenderer {
   pruneInvalidRanks() {
     if (!this.root) return;
     let removed = 0;
+    const isSpecies = (n) => {
+      const r = (n.rank || '').toLowerCase();
+      return r === 'species' || r === 'subspecies' || (n.name && n.name.trim().includes(' '));
+    };
     const stack = [this.root];
     while (stack.length) {
       const node = stack.pop();
       if (!node.children || node.children.length === 0) continue;
-      // Espécies/subespécies nunca devem ter filhos — remove qualquer filho
-      if (node.rank === 'species' || node.rank === 'subspecies') {
+      // Espécies/subespécies (ou binomiais) nunca devem ter filhos — remove qualquer filho
+      if (isSpecies(node)) {
         for (const c of node.children) {
           const idx = window.allTreeNodes ? window.allTreeNodes.indexOf(c) : -1;
           if (idx !== -1) window.allTreeNodes.splice(idx, 1);
