@@ -33,23 +33,40 @@ function parseColorHex(colorStr) {
 function _childKey(c) {
   return (c.name || '').toLowerCase() + '|' + (c.ott_id ?? c.id ?? '');
 }
+function canonicalize(name){
+  const s = String(name||'').trim();
+  const m = s.match(/^([A-Z][a-z]+ [a-z]+(?: [a-z]+)?)/);
+  return m ? m[1].toLowerCase() : s.toLowerCase();
+}
+if (typeof window !== 'undefined' && !window._globalCanonical) window._globalCanonical = new Map();
 
 // Adiciona filhos novos sem remover os já existentes (preserva a cadeia de
 // classificação da busca e evita duplicatas ao reexpandir).
 function _mergeChildren(node, incoming) {
   const existing = new Map(node.children.map(c => [_childKey(c), c]));
   const names = new Set(node.children.map(c => (c.name || '').toLowerCase()));
+  const existingCan = new Set(node.children.map(c => canonicalize(c.name)));
   const allNodes = (typeof window !== 'undefined' && Array.isArray(window.allTreeNodes)) ? window.allTreeNodes : null;
   const nodeById = (typeof window !== 'undefined' && window._nodeById && typeof window._nodeById.get === 'function') ? window._nodeById : null;
+  const globalCan = (typeof window !== 'undefined' && window._globalCanonical) ? window._globalCanonical : null;
   for (const c of incoming) {
     const k = _childKey(c);
     const nm = (c.name || '').toLowerCase();
-    // deduz tanto por chave exata quanto por nome (irmãos com mesmo nome,
-    // ex.: nó local + nó OpenTree da mesma espécie, são a mesma entrada)
-    if (existing.has(k) || names.has(nm)) continue;
+    const can = canonicalize(c.name);
+    if (existing.has(k) || names.has(nm) || existingCan.has(can)) continue;
+    // global dedup: Homo sapiens já existe sob Homo (gênero) não duplica sob espécie
+    if (globalCan && globalCan.has(can)) {
+      const owner = globalCan.get(can);
+      // se já existe sob o gênero Homo, não duplica sob espécie do mesmo gênero
+      if (owner && owner.parent && owner.parent.name === 'Homo' && node.name !== 'Homo' && node.name.startsWith('Homo ')) continue;
+      // também bloqueia duplicata global de mesma espécie em outro ramo
+      if (can === 'homo sapiens' && globalCan.has('homo sapiens')) continue;
+    }
     existing.set(k, c);
     names.add(nm);
+    existingCan.add(can);
     node.children.push(c);
+    if (globalCan && !globalCan.has(can)) globalCan.set(can, c);
     // Registra no índice global para que a busca exata (findNodeInLocalData)
     // e o autocomplete encontrem o mesmo nó (antes só a árvore o tinha).
     if (allNodes && !allNodes.includes(c)) allNodes.push(c);
@@ -580,6 +597,8 @@ export class TreeRenderer {
       return child;
     });
     _mergeChildren(node, incoming);
+    // Garante que duplicatas como Homo sapiens sob Homo erectus sejam removidas imediatamente
+    try { this.pruneInvalidRanks(); } catch {}
   }
 
   pruneInvalidRanks() {
@@ -596,10 +615,10 @@ export class TreeRenderer {
       const node = stack.pop();
       if (!node.children || node.children.length === 0) continue;
       // Caso específico: Homo sapiens só pode ser filho do gênero Homo
-      if (node.name !== 'Homo' && node.name.startsWith('Homo ')) {
+      if (canonicalize(node.name) !== 'homo' && canonicalize(node.name).startsWith('homo ')) {
         const beforeHomo = node.children.length;
         node.children = node.children.filter(c => {
-          if (c.name === 'Homo sapiens') {
+          if (canonicalize(c.name) === 'homo sapiens') {
             const idx = window.allTreeNodes ? window.allTreeNodes.indexOf(c) : -1;
             if (idx !== -1) window.allTreeNodes.splice(idx, 1);
             if (window._nodeById) {
