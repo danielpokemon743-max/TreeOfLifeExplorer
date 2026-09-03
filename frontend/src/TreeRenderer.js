@@ -617,11 +617,9 @@ export class TreeRenderer {
     if (window.allTreeNodes) {
       const toRemove = [];
       for (const n of window.allTreeNodes) {
-        const can = canonicalize(n.name);
-        if (can === 'homo sapiens' || (n.name && n.name.toLowerCase().includes('homo sapiens'))) {
-          if (n.parent && canonicalize(n.parent.name) !== 'homo') {
-            toRemove.push(n);
-          }
+        const isHomoSapiens = n.name && n.name.toLowerCase().includes('homo sapiens');
+        if (isHomoSapiens && n.parent && n.parent.name !== 'Homo') {
+          toRemove.push(n);
         }
       }
       for (const n of toRemove) {
