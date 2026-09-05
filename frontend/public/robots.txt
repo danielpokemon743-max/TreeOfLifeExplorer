@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+Disallow: /api/
+Sitemap: https://treeoflifeexplorer-1.onrender.com/sitemap.xml

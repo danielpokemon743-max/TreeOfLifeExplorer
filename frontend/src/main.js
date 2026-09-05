@@ -42,6 +42,32 @@ import {
   ACHIEVEMENT_DESCRIPTIONS
 } from './auth.js';
  
+// ─── SEO: meta dinâmica por táxon ───────────────────────────────────────────
+function updateSEOMeta(node) {
+  if (!node || !node.name) return;
+  try {
+    const title = `${node.name} — ${(node.rank||'táxon')} | Tree of Life Explorer`;
+    document.title = title;
+    const desc = document.querySelector('meta[name="description"]');
+    if (desc) desc.content = `Descubra ${node.name} (${node.rank||'táxon'}) na Árvore da Vida. Veja linhagem, fotos, conservação e distribuição de ${node.name}.`;
+    let link = document.querySelector('link[rel="canonical"]');
+    if (!link) { link = document.createElement('link'); link.rel = 'canonical'; document.head.appendChild(link); }
+    const slug = node.name.toLowerCase().replace(/\s+/g,'-').replace(/[^a-z0-9\-]/g,'');
+    const url = `https://treeoflifeexplorer-1.onrender.com/especie/${slug}`;
+    link.href = url;
+    // OG
+    let ogTitle = document.querySelector('meta[property="og:title"]');
+    if (ogTitle) ogTitle.content = title;
+    let ogUrl = document.querySelector('meta[property="og:url"]');
+    if (ogUrl) ogUrl.content = url;
+    history.pushState({id: node.id}, title, `/especie/${slug}`);
+    // JSON-LD Taxon
+    const old = document.getElementById('ld-taxon'); if (old) old.remove();
+    const ld = {"@context":"https://schema.org","@type":"Thing","name":node.name,"alternateName":node.canonicalName||node.name,"description":(document.getElementById('taxon-desc')?.textContent||'').slice(0,160)};
+    const s = document.createElement('script'); s.id='ld-taxon'; s.type='application/ld+json'; s.textContent = JSON.stringify(ld); document.head.appendChild(s);
+  } catch {}
+}
+
 // ─── SANITIZAÇÃO (XSS) ────────────────────────────────────────────────────────
 // Escapa texto para uso seguro dentro de HTML. Aplicar em QUALQUER valor que
 // venha de API externa, banco ou input do usuário antes de ir para innerHTML.
@@ -1670,6 +1696,16 @@ window._nodeById = new Map();
       try { renderer.pruneInvalidRanks(); } catch {}
     }
     initSearchModule(renderer, rootNode);
+    // Deep-link SEO: /especie/homo-sapiens -> busca automática
+    const _dlMatch = location.pathname.match(/^\/especie\/([^\/]+)/);
+    if (_dlMatch) {
+      const slug = decodeURIComponent(_dlMatch[1]||'');
+      const q = slug.replace(/-/g,' ').trim();
+      if (q) setTimeout(()=> executeSearch(q), 600);
+    }
+    window.addEventListener('popstate', (e)=>{
+      const s = e.state; if (s && s.id) { const n = window.allTreeNodes.find(x=> String(x.id)===String(s.id)); if(n) showTaxonInfo(n); }
+    });
     if (statsLoading) statsLoading.style.display = 'none';
     updateStats();
     await updateAuthUI();
@@ -2179,6 +2215,7 @@ async function showTaxonInfo(node) {
   if (!infoPanel || !node) return;
  
   currentSelectedNode = node;
+  updateSEOMeta(node);
   openModal(infoPanel, 'open');
   dismissHint();
  

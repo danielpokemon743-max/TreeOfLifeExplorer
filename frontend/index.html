@@ -4,16 +4,38 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Tree of Life Explorer — Árvore da Vida Interativa</title>
-  <meta name="description" content="Explore a evolução da vida na Terra. Árvore da Vida interativa." />
+  <title>Tree of Life Explorer — Árvore da Vida com 2,5M de Espécies | Biodiversidade & Filogenia</title>
+  <meta name="description" content="Explore a Árvore da Vida interativa com 2,5 milhões de táxons. Navegue por reinos, filos e espécies, veja fotos, linhagem evolutiva, conservação e distribuição geográfica." />
   <meta name="google-site-verification" content="Dtqle9562ZADDxn4NwI0CWnYB3ECRhUNe8_PCRKQs_U" />
+  <link rel="canonical" href="https://treeoflifeexplorer-1.onrender.com/" />
+  <meta name="robots" content="index, follow, max-image-preview:large" />
+  <meta name="author" content="Tree of Life Explorer" />
+  <meta name="theme-color" content="#07070f" />
+  <meta property="og:locale" content="pt_BR" />
+  <meta property="og:type" content="website" />
+  <meta property="og:site_name" content="Tree of Life Explorer" />
+  <meta property="og:title" content="Tree of Life Explorer — Árvore da Vida Interativa" />
+  <meta property="og:description" content="Navegue pela evolução da vida: 2,5M de espécies, linhagens e fotos." />
+  <meta property="og:url" content="https://treeoflifeexplorer-1.onrender.com/" />
+  <meta property="og:image" content="https://treeoflifeexplorer-1.onrender.com/og-cover.jpg" />
+  <meta property="og:image:width" content="1200" />
+  <meta property="og:image:height" content="630" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="Tree of Life Explorer — Árvore da Vida" />
+  <meta name="twitter:description" content="Explore 2,5M de espécies na árvore filogenética interativa." />
+  <meta name="twitter:image" content="https://treeoflifeexplorer-1.onrender.com/og-cover.jpg" />
+  <link rel="icon" href="/favicon.ico" sizes="any" />
+  <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+  <link rel="manifest" href="/manifest.webmanifest" />
+  <script type="application/ld+json">{"@context":"https://schema.org","@type":"WebSite","name":"Tree of Life Explorer","url":"https://treeoflifeexplorer-1.onrender.com/","description":"Árvore da Vida interativa com 2,5M de táxons","inLanguage":"pt-BR","potentialAction":{"@type":"SearchAction","target":"https://treeoflifeexplorer-1.onrender.com/?q={search_term_string}","query-input":"required name=search_term_string"}}</script>
+  <script type="application/ld+json">{"@context":"https://schema.org","@type":"Organization","name":"Tree of Life Explorer","logo":"https://treeoflifeexplorer-1.onrender.com/icon-512.png"}</script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link
     href="https://fonts.googleapis.com/css2?family=Inter:ital,wght@0,300;0,400;0,600;1,400&family=Outfit:wght@300;500;700&display=swap"
     rel="stylesheet">
   <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
-  <script src="/vendor/pixi.min.js" crossorigin="anonymous"
+  <script src="/vendor/pixi.min.js" defer crossorigin="anonymous"
     integrity="sha384-p5JHQB1kppHmpSZXtPI+LV6/UxmkEHxE9IyuMAnGjWsc4IvF5Vbu8xwNGoWhlKBt"></script>
 </head>
 
@@ -21,18 +43,26 @@
   <!-- Tooltip flutuante para os Táxons -->
   <div id="taxon-tooltip" class="taxon-tooltip"></div>
   <!-- Canvas da Árvore -->
-  <div id="tree-canvas" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; pointer-events: auto; z-index: 0;"></div>
+  <main id="main-content" role="main">
+    <div id="tree-canvas" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; pointer-events: auto; z-index: 0;" role="img" aria-label="Árvore filogenética interativa com 2,5 milhões de táxons"></div>
+    <noscript>
+      <section style="padding:80px 20px;max-width:700px;margin:0 auto;text-align:center;background:#07070f;color:#e2e8f0">
+        <h2>Explore a Árvore da Vida</h2>
+        <p>Ative o JavaScript para navegar na árvore interativa. Veja espécies em destaque e a página sobre o projeto:</p>
+        <ul style="list-style:none;padding:0;display:flex;gap:12px;justify-content:center;flex-wrap:wrap;margin-top:16px">
+          <li><a href="/especie/homo-sapiens">Homo sapiens</a></li>
+          <li><a href="/especie/panthera-leo">Panthera leo</a></li>
+          <li><a href="/especie/ara-ararauna">Ara ararauna</a></li>
+          <li><a href="/privacidade.html">Privacidade</a></li>
+        </ul>
+      </section>
+    </noscript>
+  </main>
 
   <!-- Barra Superior -->
   <header class="top-bar glass" role="banner">
     <button id="btn-collapse-bar" class="collapse-btn" title="Minimizar barra" aria-label="Minimizar barra">▾</button>
-    <!-- Substitua a linha antiga da .logo por esta -->
-<div class="logo" id="tree-logo">
-    <span>🌿</span>
-    <span>T</span><span>r</span><span>e</span><span>e</span>&nbsp;
-    <span>o</span><span>f</span>&nbsp;
-    <span>L</span><span>i</span><span>f</span><span>e</span>
-</div>
+  <a href="/" class="logo" id="tree-logo" aria-label="Tree of Life Explorer - Home"><h1 style="font:inherit;margin:0;display:inline">🌿 Tree of Life</h1></a>
 
     <div class="search-wrap">
       <input id="search-input" type="search" placeholder="Buscar espécie ou táxon…" autocomplete="off"
