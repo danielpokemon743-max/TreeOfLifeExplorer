@@ -103,34 +103,6 @@ app.include_router(sitemap.router)
 async def health():
     return {"status": "ok"}
 
-# Fallback SPA para rotas indexáveis /especie/*, /reino/* -> serve index.html
-@app.get("/{full_path:path}", include_in_schema=False)
-async def spa_fallback(full_path: str):
-    if full_path.startswith("api/"):
-        from fastapi import HTTPException
-        raise HTTPException(status_code=404, detail="Not found")
-    # deixa StaticFiles lidar com assets reais; só fallback para rotas sem extensão
-    if "." in full_path.split("/")[-1]:
-        from fastapi import HTTPException
-        raise HTTPException(status_code=404, detail="Not found")
-    try:
-        dist = next((c for c in _candidate_dists() if os.path.isdir(c)), None) if '_candidate_dists' in globals() else None
-        # fallback: tenta os mesmos candidatos do mount
-        import os as _os
-        base = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-        cands = [os.environ.get("FRONTEND_DIST")] if os.environ.get("FRONTEND_DIST") else []
-        cands += [os.path.join(base, "frontend", "dist"), os.path.join(base.replace("/backend",""), "frontend", "dist")]
-        for c in cands:
-            if c and _os.path.isdir(c):
-                idx = _os.path.join(c, "index.html")
-                if _os.path.isfile(idx):
-                    from fastapi.responses import FileResponse
-                    return FileResponse(idx)
-    except Exception:
-        pass
-    from fastapi import HTTPException
-    raise HTTPException(status_code=404, detail="Not found")
-
 # Servir o frontend compilado (se existir). Deve ficar DEPOIS dos routers /API.
 try:
     def _candidate_dists() -> list[str]:
