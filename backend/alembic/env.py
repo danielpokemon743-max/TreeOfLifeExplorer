@@ -20,10 +20,31 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 from app.config import settings as _settings
 from app.models import Base as _AppBase
 
-# Converte DATABASE_URL async para sync se necessário (alembic usa sync)
+# Converte DATABASE_URL para o formato esperado pelo Alembic (lida com sslmode para asyncpg)
 def _alembic_sync_url(url: str) -> str:
-    if url.startswith("postgresql+asyncpg://"):
-        return url.replace("postgresql+asyncpg://", "postgresql://", 1)
+    from urllib.parse import urlparse, urlunparse, parse_qsl, urlencode
+    parsed = urlparse(url)
+    # Para async (asyncpg), converte sslmode -> ssl
+    if parsed.scheme in ("postgresql", "postgresql+asyncpg"):
+        qsl = parse_qsl(parsed.query, keep_blank_values=True)
+        new_qsl = []
+        use_ssl = False
+        for k, v in qsl:
+            if k == "sslmode":
+                if v in ("require", "verify-ca", "verify-full"):
+                    use_ssl = True
+                continue
+            new_qsl.append((k, v))
+        if use_ssl and not any(k == "ssl" for k, _ in new_qsl):
+            new_qsl.append(("ssl", "true"))
+        # Alembic offline usa sync (psycopg2) que aceita sslmode, mas online usa async (asyncpg) que precisa ssl
+        # Mantém async para online, sync para offline será convertido pelo próprio Alembic se necessário
+        # Por padrão, deixa async para o online
+        if parsed.scheme == "postgresql":
+            parsed = parsed._replace(scheme="postgresql+asyncpg")
+        new_query = urlencode(new_qsl)
+        parsed = parsed._replace(query=new_query)
+        return urlunparse(parsed)
     if url.startswith("sqlite+aiosqlite://"):
         return url.replace("sqlite+aiosqlite://", "sqlite://", 1)
     return url

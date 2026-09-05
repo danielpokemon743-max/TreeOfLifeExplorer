@@ -9,9 +9,22 @@ from app.models import Base, SiteView
 def _async_url(url: str) -> str:
     from urllib.parse import urlparse, urlunparse, parse_qsl, urlencode
     parsed = urlparse(url)
-    # Só converte o scheme, preserva query (sslmode etc.)
     if parsed.scheme == "postgresql":
-        parsed = parsed._replace(scheme="postgresql+asyncpg")
+        # asyncpg não aceita sslmode como query param, converte para ssl
+        qsl = parse_qsl(parsed.query, keep_blank_values=True)
+        new_qsl = []
+        use_ssl = False
+        for k, v in qsl:
+            if k == "sslmode":
+                if v in ("require", "verify-ca", "verify-full"):
+                    use_ssl = True
+                # descarta sslmode da query para asyncpg
+                continue
+            new_qsl.append((k, v))
+        if use_ssl and not any(k == "ssl" for k, _ in new_qsl):
+            new_qsl.append(("ssl", "true"))
+        new_query = urlencode(new_qsl)
+        parsed = parsed._replace(scheme="postgresql+asyncpg", query=new_query)
     return urlunparse(parsed)
 
 DATABASE_URL = _async_url(settings.DATABASE_URL)
