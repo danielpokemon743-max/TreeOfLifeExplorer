@@ -60,7 +60,7 @@ function updateSEOMeta(node) {
     if (ogTitle) ogTitle.content = title;
     let ogUrl = document.querySelector('meta[property="og:url"]');
     if (ogUrl) ogUrl.content = url;
-    history.pushState({id: node.id}, title, `/especie/${slug}`);
+    history.replaceState({id: node.id}, title, `/especie/${slug}`);
     // JSON-LD Taxon
     const old = document.getElementById('ld-taxon'); if (old) old.remove();
     const ld = {"@context":"https://schema.org","@type":"Thing","name":node.name,"alternateName":node.canonicalName||node.name,"description":(document.getElementById('taxon-desc')?.textContent||'').slice(0,160)};
@@ -1696,13 +1696,7 @@ window._nodeById = new Map();
       try { renderer.pruneInvalidRanks(); } catch {}
     }
     initSearchModule(renderer, rootNode);
-    // Deep-link SEO: /especie/homo-sapiens -> busca automática
-    const _dlMatch = location.pathname.match(/^\/especie\/([^\/]+)/);
-    if (_dlMatch) {
-      const slug = decodeURIComponent(_dlMatch[1]||'');
-      const q = slug.replace(/-/g,' ').trim();
-      if (q) setTimeout(()=> executeSearch(q), 600);
-    }
+    // Deep-link SEO: /especie/homo-sapiens -> apenas atualiza URL, sem busca automática no reload
     window.addEventListener('popstate', (e)=>{
       const s = e.state; if (s && s.id) { const n = window.allTreeNodes.find(x=> String(x.id)===String(s.id)); if(n) showTaxonInfo(n); }
     });
