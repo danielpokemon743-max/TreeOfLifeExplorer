@@ -613,14 +613,18 @@ export class TreeRenderer {
       const name = (n.name || '').trim();
       return r === 'no rank' && name.includes(' ') && /^[A-Z][a-z]+ [a-z]+/.test(name);
     };
-    // Varredura global: só o Homo sapiens correto (770315 sob Homo) sobrevive
+    // Varredura global: só um Homo sapiens sob o gênero Homo sobrevive
     if (window.allTreeNodes) {
+      const homoGenus = window.allTreeNodes.find(n => n.name === 'Homo' && (n.rank||'').toLowerCase() === 'genus');
       const toRemove = [];
-      for (const n of window.allTreeNodes) {
-        const isHomoSapiens = n.name && n.name.toLowerCase().includes('homo sapiens');
-        if (isHomoSapiens) {
-          const isCorrect = String(n.id) === '770315' && n.parent && n.parent.name === 'Homo' && (n.parent.rank||'').toLowerCase() === 'genus';
-          if (!isCorrect) toRemove.push(n);
+      let kept = false;
+      for (const n of [...window.allTreeNodes]) {
+        if (n.name && n.name.toLowerCase().includes('homo sapiens')) {
+          if (n.parent === homoGenus && !kept) {
+            kept = true;
+            continue;
+          }
+          toRemove.push(n);
         }
       }
       for (const n of toRemove) {
