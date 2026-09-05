@@ -42,6 +42,11 @@
 <body>
   <!-- Tooltip flutuante para os Táxons -->
   <div id="taxon-tooltip" class="taxon-tooltip"></div>
+  <!-- Overlay de carregamento da busca -->
+  <div id="search-overlay" style="display:none;position:fixed;top:0;left:0;width:100vw;height:100vh;background:rgba(7,7,15,0.65);z-index:90;align-items:center;justify-content:center;flex-direction:column;gap:16px">
+    <div style="width:48px;height:48px;border:3px solid rgba(255,255,255,0.2);border-top-color:#2ecc71;border-radius:50%;animation:spin 0.9s linear infinite"></div>
+    <span style="color:#e2e8f0;font-size:14px">Buscando táxon…</span>
+  </div>
   <!-- Canvas da Árvore -->
   <main id="main-content" role="main">
     <div id="tree-canvas" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; pointer-events: auto; z-index: 0;" role="img" aria-label="Árvore filogenética interativa com 2,5 milhões de táxons"></div>
@@ -81,9 +86,10 @@
     <button id="btn-collapse-bar" class="collapse-btn" title="Minimizar barra" aria-label="Minimizar barra">▾</button>
   <a href="/" class="logo" id="tree-logo" aria-label="Tree of Life Explorer - Home"><h1 style="font:inherit;margin:0;display:inline">🌿 Tree of Life</h1></a>
 
-    <div class="search-wrap">
+    <div class="search-wrap" style="position:relative">
       <input id="search-input" type="search" placeholder="Buscar espécie ou táxon…" autocomplete="off"
         aria-label="Buscar táxon" />
+      <div id="search-loading" style="display:none;position:absolute;right:10px;top:50%;transform:translateY(-50%);width:18px;height:18px;border:2px solid rgba(255,255,255,0.3);border-top-color:#2ecc71;border-radius:50%;animation:spin 0.8s linear infinite"></div>
     </div>
 
     <div class="controls" role="toolbar">

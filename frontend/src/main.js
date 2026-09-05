@@ -1907,6 +1907,12 @@ export async function executeSearch(queryText) {
     console.warn("A árvore ainda não foi totalmente carregada.");
     return;
   }
+
+  const _searchLoading = document.getElementById('search-loading');
+  const _searchOverlay = document.getElementById('search-overlay');
+  const _hideSearchLoad = () => { if (_searchLoading) _searchLoading.style.display = 'none'; if (_searchOverlay) _searchOverlay.style.display = 'none'; };
+  if (_searchLoading) _searchLoading.style.display = 'block';
+  if (_searchOverlay) _searchOverlay.style.display = 'flex';
  
   let foundNode = findNodeInLocalData(targetQuery);
  
@@ -1914,6 +1920,7 @@ export async function executeSearch(queryText) {
     if (!isBiologicalName(targetQuery)) {
       alert(`"${targetQuery}" não parece ser um nome biológico válido.`);
       if (statsLoading) statsLoading.style.display = 'none';
+      _hideSearchLoad();
       return;
     }
     if (statsLoading) {
@@ -1951,6 +1958,8 @@ export async function executeSearch(queryText) {
       }
     }
   }
+ 
+  _hideSearchLoad();
  
   if (foundNode) {
     // Abre todas as "pastas" do ancestral até o nó pesquisado para permitir o foco visual
