@@ -103,6 +103,33 @@ app.include_router(sitemap.router)
 async def health():
     return {"status": "ok"}
 
+# SEO deep-links: /especie/* e /reino/* servem o SPA (index.html) para indexação
+@app.get("/especie/{slug}", include_in_schema=False)
+async def especie_fallback(slug: str):
+    import os as _os
+    from fastapi.responses import FileResponse
+    base = _os.path.dirname(_os.path.dirname(os.path.abspath(__file__)))
+    for c in [os.environ.get("FRONTEND_DIST"), _os.path.join(base, "frontend", "dist"), _os.path.join(base.replace("/backend",""), "frontend", "dist")]:
+        if c and _os.path.isdir(c):
+            idx = _os.path.join(c, "index.html")
+            if _os.path.isfile(idx):
+                return FileResponse(idx)
+    from fastapi import HTTPException
+    raise HTTPException(status_code=404)
+
+@app.get("/reino/{slug}", include_in_schema=False)
+async def reino_fallback(slug: str):
+    import os as _os
+    from fastapi.responses import FileResponse
+    base = _os.path.dirname(_os.path.dirname(os.path.abspath(__file__)))
+    for c in [os.environ.get("FRONTEND_DIST"), _os.path.join(base, "frontend", "dist"), _os.path.join(base.replace("/backend",""), "frontend", "dist")]:
+        if c and _os.path.isdir(c):
+            idx = _os.path.join(c, "index.html")
+            if _os.path.isfile(idx):
+                return FileResponse(idx)
+    from fastapi import HTTPException
+    raise HTTPException(status_code=404)
+
 # Servir o frontend compilado (se existir). Deve ficar DEPOIS dos routers /API.
 try:
     def _candidate_dists() -> list[str]:
