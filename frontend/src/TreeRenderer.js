@@ -622,6 +622,36 @@ export class TreeRenderer {
 
   pruneInvalidRanks() {
     if (!this.root) return;
+    // Corrige Protozoa que no TSV está como filho direto de Biota, mas deve estar sob Eukaryota
+    try {
+      const biota = this.root;
+      const euk = (biota.children||[]).find(c=> (c.name==='Eukaryota' || c.name==='Eukariota') && (c.rank||'').toLowerCase()==='domain');
+      const proto = (biota.children||[]).find(c=> c.name==='Protozoa' && (c.rank||'').toLowerCase()==='kingdom');
+      if (euk && proto) {
+        const idx = biota.children.indexOf(proto);
+        if (idx !== -1) {
+          biota.children.splice(idx,1);
+          proto.parent = euk;
+          if (!euk.children) euk.children = [];
+          if (!euk.children.includes(proto)) euk.children.push(proto);
+          euk.children.sort((a,b)=> (a.name||'').localeCompare(b.name||''));
+          euk.expanded = true;
+        }
+      }
+    } catch {}
+    // Ordena filhos de Biota por rank (domain antes de kingdom) e depois alfabético
+    try {
+      const rankOrder = { 'life':0, 'domain':1, 'kingdom':2 };
+      const biota = this.root;
+      if (biota && biota.children) {
+        biota.children.sort((a,b)=>{
+          const ra = rankOrder[(a.rank||'').toLowerCase()] ?? 99;
+          const rb = rankOrder[(b.rank||'').toLowerCase()] ?? 99;
+          if (ra !== rb) return ra - rb;
+          return (a.name||'').localeCompare(b.name||'');
+        });
+      }
+    } catch {}
     let removed = 0;
     const isSpecies = (n) => {
       const r = (n.rank || '').toLowerCase();
