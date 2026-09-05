@@ -643,6 +643,15 @@ export class TreeRenderer {
           toRemove.push(n);
         }
       }
+      // Duplicatas de Ignavibacteria/Chlorobiia sob Biota (corretas sob Bacteroidota já existem)
+      for (const n of [...window.allTreeNodes]) {
+        if ((n.name === 'Ignavibacteria' || n.name === 'Chlorobiia' || n.name === 'Chlorobia') && n.parent && n.parent.name === 'Biota (Vida)') {
+          // mantém a correta sob Bacteroidota (id 7421138/168), remove a sob Biota (CRRTD/CSCKP)
+          if (n.id === 'CRRTD' || n.id === 'CSCKP' || n.parent.name === 'Biota (Vida)') {
+            if (!toRemove.includes(n)) toRemove.push(n);
+          }
+        }
+      }
       for (const n of toRemove) {
         const p = n.parent;
         if (p && p.children) {
