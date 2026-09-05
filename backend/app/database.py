@@ -10,22 +10,21 @@ def _async_url(url: str) -> str:
     from urllib.parse import urlparse, urlunparse, parse_qsl, urlencode
     parsed = urlparse(url)
     if parsed.scheme == "postgresql":
-        # asyncpg não aceita sslmode como query param, converte para ssl
+        # asyncpg lida com ssl via connect_args, não via sslmode na query
         qsl = parse_qsl(parsed.query, keep_blank_values=True)
-        new_qsl = []
-        use_ssl = False
-        for k, v in qsl:
-            if k == "sslmode":
-                if v in ("require", "verify-ca", "verify-full"):
-                    use_ssl = True
-                # descarta sslmode da query para asyncpg
-                continue
-            new_qsl.append((k, v))
-        if use_ssl and not any(k == "ssl" for k, _ in new_qsl):
-            new_qsl.append(("ssl", "true"))
+        new_qsl = [(k, v) for k, v in qsl if k != "sslmode"]
         new_query = urlencode(new_qsl)
         parsed = parsed._replace(scheme="postgresql+asyncpg", query=new_query)
     return urlunparse(parsed)
+
+def _connect_args(url: str) -> dict:
+    from urllib.parse import urlparse, parse_qsl
+    parsed = urlparse(url)
+    qsl = parse_qsl(parsed.query, keep_blank_values=True)
+    for k, v in qsl:
+        if k == "sslmode" and v in ("require", "verify-ca", "verify-full"):
+            return {"ssl": True}
+    return {}
 
 DATABASE_URL = _async_url(settings.DATABASE_URL)
 
@@ -37,6 +36,7 @@ engine = create_async_engine(
     max_overflow=10,
     pool_timeout=30,
     pool_recycle=1800,
+    connect_args=_connect_args(settings.DATABASE_URL),
 )
 async_session = async_sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
 
