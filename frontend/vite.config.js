@@ -16,5 +16,14 @@ export default defineConfig({
         rewrite: (path) => path.replace(/^\/otol-api/, '/v3')
       }
     }
+  },
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          vendor: ['@simplewebauthn/browser'],
+        }
+      }
+    }
   }
 })

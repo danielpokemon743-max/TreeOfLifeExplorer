@@ -2,6 +2,7 @@ import os
 from contextlib import asynccontextmanager
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import JSONResponse
 from starlette.middleware.base import BaseHTTPMiddleware
@@ -79,6 +80,7 @@ app.state.limiter = limiter
 async def _rate_limit_handler(request: Request, exc: RateLimitExceeded):
     return JSONResponse(status_code=429, content={"detail": f"Rate limit excedido. Tente novamente em {exc.detail}"})
 
+app.add_middleware(GZipMiddleware, minimum_size=1000)
 app.add_middleware(NoCacheHtmlMiddleware)
 app.add_middleware(
     CORSMiddleware,

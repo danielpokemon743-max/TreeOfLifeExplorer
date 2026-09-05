@@ -177,9 +177,9 @@ export class TreeRenderer {
       height: window.innerHeight,
       backgroundColor: 0x000000,
       backgroundAlpha: 0,
-      resolution: window.devicePixelRatio || 1,
+      resolution: Math.min(window.devicePixelRatio || 1, 1.5),
       autoDensity: true,
-      antialias: true
+      antialias: false
     });
  
     this.container.appendChild(this.app.view);
@@ -211,6 +211,8 @@ export class TreeRenderer {
     this.world.addChild(this.gfxParticles);
     this._particles = [];
     this._pulseTime = 0;
+    this._textPool = [];
+    this._textPoolIndex = 0;
 
     // Parallax de fundo (3 camadas de estrelas)
     this._bgContainer = new PIXI.Container();
@@ -439,7 +441,14 @@ export class TreeRenderer {
   }
   _countLeaves(node) {
     if (node.isLeaf) return 1;
-    return node.children.reduce((s, c) => s + this._countLeaves(c), 0);
+    if (node._leafCount !== undefined && !node._leafDirty) return node._leafCount;
+    const v = node.children.reduce((s, c) => s + this._countLeaves(c), 0);
+    node._leafCount = v;
+    node._leafDirty = false;
+    return v;
+  }
+  _invalidateLeafCount(node) {
+    while (node) { node._leafDirty = true; node = node.parent; }
   }
  
   _recomputeLayout() {
@@ -448,6 +457,13 @@ export class TreeRenderer {
  
     this._collectNodes(this.root);
  
+    // limpa cache de folhas antes de recalcular
+    const stack = [this.root];
+    while (stack.length) {
+      const n = stack.pop();
+      n._leafDirty = true;
+      if (n.children) for (const c of n.children) stack.push(c);
+    }
     const total = this._countLeaves(this.root);
     this._assignPos(this.root, 0, -(total * ROW_H) / 2);
     this._layoutPending = false;
@@ -865,20 +881,36 @@ export class TreeRenderer {
         (scale > 0.25 && (n.expanded || n.selected || isMajorRank));
  
       if (shouldShowLabel) {
-        const textObj = new PIXI.Text(n.name, {
-          fontFamily: 'Arial, sans-serif',
-          fontSize: Math.max(9, Math.min(13, 11 / scale)),
-          fill: n.selected ? 0x00FFCC : 0xFFFFFF,
-          fontWeight: n.selected ? 'bold' : 'normal'
-        });
- 
+        let textObj = this._textPool[this._textPoolIndex];
+        if (!textObj) {
+          textObj = new PIXI.Text('', {
+            fontFamily: 'Arial, sans-serif',
+            fontSize: 11,
+            fill: 0xFFFFFF,
+          });
+          this._textPool.push(textObj);
+          this.gfxLabels.addChild(textObj);
+        } else if (!textObj.parent) {
+          this.gfxLabels.addChild(textObj);
+        }
+        textObj.text = n.name;
+        textObj.style.fontSize = Math.max(9, Math.min(13, 11 / scale));
+        textObj.style.fill = n.selected ? 0x00FFCC : 0xFFFFFF;
+        textObj.style.fontWeight = n.selected ? 'bold' : 'normal';
         textObj.x = n.x + r + 6;
         textObj.y = n.y - 6;
         textObj.alpha = n._alpha || 1;
- 
-        this.gfxLabels.addChild(textObj);
+        textObj.visible = true;
+        this._textPoolIndex++;
       }
     }
+    // esconde Textos não usados neste frame
+    for (let i = this._textPoolIndex; i < this._textPool.length; i++) {
+      const t = this._textPool[i];
+      if (t.parent) this.gfxLabels.removeChild(t);
+      t.visible = false;
+    }
+    this._textPoolIndex = 0;
   }
  
   _inViewport(n) {
