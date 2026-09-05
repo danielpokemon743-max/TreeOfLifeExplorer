@@ -1249,7 +1249,7 @@ async function fetchExternalChildren(node) {
   if (!node || !node.name || node._externalLoaded || node._externalLoading) return;
   node._externalLoading = true;
 
-  if (node.rank === 'species' || node.rank === 'subspecies') {
+  if ((node.rank === 'species' || node.rank === 'subspecies') && !node.name.toLowerCase().includes('homo sapiens')) {
     node.loaded = true;
     node._externalLoading = false;
     return;
