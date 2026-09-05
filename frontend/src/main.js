@@ -1884,6 +1884,14 @@ function findNodeInLocalData(query) {
   const idMatch = window._nodeById.get(raw);
   if (idMatch) return idMatch;
 
+  // Caso especial: Eukaryota/Eukariota/Eucariota são o mesmo domínio
+  if (target === 'eukaryota' || target === 'eukariota' || target === 'eucariota') {
+    const euk = window.allTreeNodes.find(n => {
+      const nn = normalizeStr(n.name);
+      return nn === 'eukaryota' || nn === 'eukariota' || nn === 'eucariota';
+    });
+    if (euk) return euk;
+  }
   // 2. Busca exata por nome ou nome popular normalizado (ignora maiúsculas/minúsculas e acentos)
   return window.allTreeNodes.find(n =>
     normalizeStr(n.name) === target ||
